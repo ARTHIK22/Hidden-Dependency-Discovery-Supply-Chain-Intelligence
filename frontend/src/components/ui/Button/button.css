@@ -1,0 +1,6 @@
+.liquid-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;border-radius:var(--radius-pill);cursor:pointer;font-weight:600;transition:transform var(--transition-fast),box-shadow var(--transition-normal)}
+.liquid-button:hover{transform:translateY(-1px)}.liquid-button:active{transform:translateY(1px)}
+.liquid-button-primary{color:white;background:linear-gradient(135deg,var(--clay),var(--clay-dark));box-shadow:0 8px 22px rgba(128,86,63,.22)}
+.liquid-button-secondary{color:var(--text-primary);background:var(--glass-strong);border:1px solid var(--glass-border)}
+.liquid-button-ghost{color:var(--text-secondary);background:transparent}.liquid-button-sm{padding:9px 15px;font-size:13px}.liquid-button-md{padding:12px 18px;font-size:14px}.liquid-button-lg{padding:15px 23px;font-size:15px}
+.liquid-button-full{width:100%}.liquid-button:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
