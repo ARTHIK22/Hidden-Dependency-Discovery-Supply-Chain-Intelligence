@@ -4,3 +4,7 @@ dist/
 frontend/dist/
 .vite/
 frontend/.vite/
+backend/venv/
+__pycache__/
+*.py[cod]
+.env
