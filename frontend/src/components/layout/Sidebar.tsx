@@ -10,18 +10,19 @@ import {
 	Settings,
 	ChevronRight,
 } from "lucide-react";
+import { NavLink } from "react-router-dom";
 
 import "./sidebar.css";
 
 const navigation = [
-	{ label: "Overview", icon: LayoutDashboard, active: true },
-	{ label: "Research", icon: Search },
-	{ label: "Dependency Graph", icon: Network },
-	{ label: "Evidence", icon: FileSearch },
-	{ label: "Risks", icon: ShieldAlert },
-	{ label: "Alerts", icon: Bell },
-	{ label: "Watchlist", icon: Star },
-	{ label: "Reports", icon: FileText },
+	{ label: "Overview", icon: LayoutDashboard, path: "/" },
+	{ label: "Research", icon: Search, path: "/research" },
+	{ label: "Dependency Graph", icon: Network, path: "/graph" },
+	{ label: "Evidence", icon: FileSearch, path: "/evidence" },
+	{ label: "Risks", icon: ShieldAlert, path: "/risks" },
+	{ label: "Alerts", icon: Bell, path: "/alerts" },
+	{ label: "Watchlist", icon: Star, path: "/watchlist" },
+	{ label: "Reports", icon: FileText, path: "/reports" },
 ];
 
 function Sidebar() {
@@ -44,21 +45,26 @@ function Sidebar() {
 						const Icon = item.icon;
 
 						return (
-							<button
+							<NavLink
 								key={item.label}
-								className={`sidebar-item ${item.active ? "active" : ""}`}
-								aria-current={item.active ? "page" : undefined}
-								type="button"
+								to={item.path}
+								className={({ isActive }) =>
+									`sidebar-item ${isActive ? "active" : ""}`
+								}
 							>
-								<Icon size={18} strokeWidth={1.8} />
-								<span>{item.label}</span>
-								{item.active && (
-									<ChevronRight
-										size={15}
-										className="sidebar-active-arrow"
-									/>
+								{({ isActive }) => (
+									<>
+										<Icon size={18} strokeWidth={1.8} />
+										<span>{item.label}</span>
+										{isActive && (
+											<ChevronRight
+												size={15}
+												className="sidebar-active-arrow"
+											/>
+										)}
+									</>
 								)}
-							</button>
+							</NavLink>
 						);
 					})}
 				</nav>

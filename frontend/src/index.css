@@ -1,3 +1,39 @@
+:root {
+  --bg-primary: #eee9df;
+
+  --glass: rgba(255, 253, 247, 0.62);
+  --glass-strong: rgba(255, 253, 247, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.72);
+
+  --clay: #a97858;
+  --clay-dark: #80563f;
+  --clay-light: #c49b7c;
+
+  --butter: #e7d79d;
+  --butter-light: #f4eac4;
+
+  --text-primary: #302b25;
+  --text-secondary: #716a60;
+  --text-muted: #9a9287;
+
+  --success: #758d68;
+  --danger: #b56f68;
+  --warning: #c39b55;
+
+  --radius-xl: 32px;
+  --radius-lg: 24px;
+  --radius-md: 18px;
+  --radius-pill: 999px;
+
+  --glass-blur: 24px;
+
+  --shadow-card:
+    0 18px 50px rgba(74, 58, 44, 0.08);
+
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -23,9 +59,9 @@ body {
     "Segoe UI",
     sans-serif;
 
-  background: #eee9df;
+  background: var(--bg-primary);
 
-  color: #302b25;
+  color: var(--text-primary);
 
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -48,6 +84,6 @@ a {
 }
 
 ::selection {
-  background: #a97858;
+  background: var(--clay);
   color: #ffffff;
 }

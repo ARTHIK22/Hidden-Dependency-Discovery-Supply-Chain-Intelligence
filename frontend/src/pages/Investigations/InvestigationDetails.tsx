@@ -1,74 +1,437 @@
-import type { ElementType } from "react";
-import { useEffect, useState } from "react";
-import { ArrowLeft, Check, ChevronRight, Database, Factory, FileSearch, Globe2, Loader2, Network, Search, ShieldCheck, Sparkles, Timer } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Card from "../../components/ui/Card/Card";
-import Badge from "../../components/ui/Badge/Badge";
-import Button from "../../components/ui/Button/Button";
-import PageContainer from "../../components/layout/PageContainer";
+import {
+  CheckCircle2,
+  Circle,
+  Clock3,
+  Database,
+  GitBranch,
+  Globe2,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  AlertTriangle,
+  ArrowRight,
+} from "lucide-react";
 import "./investigation-details.css";
 
-type AgentStatus = "pending" | "running" | "completed";
-interface Agent { id: string; name: string; description: string; status: AgentStatus; icon: ElementType; }
-interface ActivityEvent { id: number; type: string; title: string; description: string; time: string; icon: ElementType; }
-const initialAgents: Agent[] = [
-  { id: "planner", name: "Planning Agent", description: "Breaking the investigation goal into research tasks", status: "running", icon: Sparkles },
-  { id: "research", name: "Research Agent", description: "Searching permitted external information sources", status: "pending", icon: Search },
-  { id: "entities", name: "Entity Discovery", description: "Identifying suppliers, manufacturers and facilities", status: "pending", icon: Database },
-  { id: "relationships", name: "Relationship Discovery", description: "Finding connections between discovered entities", status: "pending", icon: Network },
-  { id: "verification", name: "Verification Agent", description: "Checking relationships against source evidence", status: "pending", icon: ShieldCheck },
-  { id: "graph", name: "Graph Builder", description: "Constructing the dependency intelligence graph", status: "pending", icon: Network },
+type AgentStatus = "pending" | "active" | "completed" | "error";
+
+type Agent = {
+  id: string;
+  name: string;
+  description: string;
+  status: AgentStatus;
+};
+
+type EventItem = {
+  id: string;
+  agent: string;
+  status: string;
+  message: string;
+};
+
+const INITIAL_AGENTS: Agent[] = [
+  {
+    id: "planning",
+    name: "Planning Agent",
+    description: "Building investigation plan",
+    status: "pending",
+  },
+  {
+    id: "research",
+    name: "Research Agent",
+    description: "Discovering permitted sources",
+    status: "pending",
+  },
+  {
+    id: "entities",
+    name: "Entity Discovery",
+    description: "Resolving organizations and materials",
+    status: "pending",
+  },
+  {
+    id: "relationships",
+    name: "Relationship Agent",
+    description: "Connecting dependency relationships",
+    status: "pending",
+  },
+  {
+    id: "verification",
+    name: "Verification Agent",
+    description: "Checking evidence and confidence",
+    status: "pending",
+  },
+  {
+    id: "risk",
+    name: "Risk Agent",
+    description: "Identifying dependency risks",
+    status: "pending",
+  },
 ];
-const demoEvents: Omit<ActivityEvent, "id" | "time">[] = [
-  { type: "agent", title: "Planning Agent started", description: "Investigation plan created with 6 research stages", icon: Sparkles },
-  { type: "source", title: "Source discovered", description: "Corporate supplier information identified", icon: FileSearch },
-  { type: "entity", title: "Entity discovered", description: "XYZ Manufacturing identified as a manufacturer", icon: Factory },
-  { type: "relationship", title: "Relationship found", description: "ABC Electronics → SUPPLIES → XYZ Manufacturing", icon: Network },
-  { type: "entity", title: "Geographic dependency discovered", description: "Production facility associated with Region X", icon: Globe2 },
-];
+
+const agentNameToId: Record<string, string> = {
+  "Planning Agent": "planning",
+  "Research Agent": "research",
+  "Entity Discovery": "entities",
+  "Relationship Agent": "relationships",
+  "Verification Agent": "verification",
+  "Risk Agent": "risk",
+};
 
 function InvestigationDetails() {
   const navigate = useNavigate();
-  const [agents, setAgents] = useState<Agent[]>(initialAgents);
-  const [events, setEvents] = useState<ActivityEvent[]>([]);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [isComplete, setIsComplete] = useState(false);
+
+  const [agents, setAgents] = useState<Agent[]>(INITIAL_AGENTS);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [connected, setConnected] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [result, setResult] = useState<any>(null);
+
+  const investigationId =
+    sessionStorage.getItem("active_investigation_id") ||
+    "demo-investigation";
 
   useEffect(() => {
-    const sequence = [
-      { delay: 2200, agent: "planner", next: "research" }, { delay: 4500, agent: "research", next: "entities" },
-      { delay: 7000, agent: "entities", next: "relationships" }, { delay: 9500, agent: "relationships", next: "verification" },
-      { delay: 12000, agent: "verification", next: "graph" }, { delay: 14500, agent: "graph", next: null },
-    ];
-    const timers = sequence.map(({ delay, agent, next }, index) => setTimeout(() => {
-      setAgents((current) => current.map((item) => item.id === agent ? { ...item, status: "completed" } : item.id === next ? { ...item, status: "running" } : item));
-      const demoEvent = demoEvents[index];
-      if (demoEvent) setEvents((current) => [{ ...demoEvent, id: Date.now(), time: "just now" }, ...current]);
-      if (!next) setIsComplete(true);
-    }, delay));
-    return () => timers.forEach(clearTimeout);
-  }, []);
+    const socket = new WebSocket(
+      `ws://localhost:8000/ws/investigations/${investigationId}`
+    );
 
-  useEffect(() => {
-    if (isComplete) return;
-    const timer = setInterval(() => setElapsedSeconds((value) => value + 1), 1000);
-    return () => clearInterval(timer);
-  }, [isComplete]);
+    socket.onopen = () => {
+      setConnected(true);
 
-  const completedAgents = agents.filter((agent) => agent.status === "completed").length;
-  const progress = completedAgents / agents.length * 100;
-  return <PageContainer><div className="investigation-execution animate-fade">
-    <div className="execution-header"><button className="back-button" onClick={() => navigate("/")}><ArrowLeft size={16} />Dashboard</button><div className="execution-title"><div><div className="eyebrow">LIVE INVESTIGATION</div><h1>Battery Supply Chain</h1><p>Investigating upstream suppliers, manufacturers, materials and geographic dependencies.</p></div><div className="execution-status">{isComplete ? <><Check size={14} />Investigation complete</> : <><span className="pulse-dot" />Investigation running</>}</div></div></div>
-    <Card className="execution-progress-card"><div className="progress-top"><div><span className="progress-label">INVESTIGATION PROGRESS</span><strong>{isComplete ? "Investigation complete" : "AI agents are investigating dependencies"}</strong></div><div className="progress-percent">{Math.round(progress)}%</div></div><div className="execution-progress-bar"><div style={{ width: `${progress}%` }} /></div><div className="progress-footer"><span>{completedAgents} of {agents.length} stages completed</span><span className="elapsed"><Timer size={12} />{formatTime(elapsedSeconds)}</span></div></Card>
-    <div className="execution-grid"><Card className="agent-pipeline-card"><div className="section-heading"><div><span className="eyebrow">AGENT PIPELINE</span><h2>Investigation workflow</h2></div><Badge variant={isComplete ? "success" : "warning"}>{isComplete ? "Completed" : "Running"}</Badge></div><div className="agent-pipeline">{agents.map((agent, index) => <AgentPipelineItem key={agent.id} agent={agent} last={index === agents.length - 1} />)}</div></Card><Card className="activity-feed-card"><div className="section-heading"><div><span className="eyebrow">LIVE FEED</span><h2>Investigation activity</h2></div><span className="live-indicator"><span />Live</span></div><div className="execution-events">{events.length === 0 ? <div className="waiting-state"><Loader2 size={22} className="spin" /><span>Waiting for investigation events...</span></div> : events.map((event) => <ActivityEventItem key={event.id} event={event} />)}</div></Card></div>
-    <section className="discovery-summary"><DiscoveryCard icon={Database} label="ENTITIES" value={isComplete ? "184" : "47"} detail="discovered" /><DiscoveryCard icon={Network} label="RELATIONSHIPS" value={isComplete ? "312" : "86"} detail="discovered" /><DiscoveryCard icon={FileSearch} label="SOURCES" value={isComplete ? "428" : "73"} detail="collected" /><DiscoveryCard icon={ShieldCheck} label="VERIFIED" value={isComplete ? "91%" : "78%"} detail="evidence confidence" /></section>
-    {isComplete && <Card className="completion-card"><div className="completion-icon"><Check size={20} /></div><div className="completion-content"><span className="eyebrow">INVESTIGATION COMPLETE</span><h2>Your dependency intelligence graph is ready.</h2><p>184 entities and 312 relationships were discovered across 428 sources.</p></div><Button size="md" onClick={() => navigate("/graph")}>Explore Dependency Graph<ChevronRight size={16} /></Button></Card>}
-  </div></PageContainer>;
+      socket.send("start");
+    };
+
+    socket.onclose = () => {
+      setConnected(false);
+    };
+
+    socket.onerror = () => {
+      setConnected(false);
+    };
+
+    socket.onmessage = (message) => {
+      try {
+        const data = JSON.parse(message.data);
+
+        if (data.type === "agent_started") {
+          const agentId = agentNameToId[data.agent];
+
+          if (agentId) {
+            setAgents((current) =>
+              current.map((agent) =>
+                agent.id === agentId
+                  ? { ...agent, status: "active" }
+                  : agent
+              )
+            );
+          }
+
+          setEvents((current) => [
+            {
+              id: `${Date.now()}-${Math.random()}`,
+              agent: data.agent,
+              status: "ACTIVE",
+              message: data.message || "Agent started.",
+            },
+            ...current,
+          ]);
+        }
+
+        if (data.type === "agent_completed") {
+          const agentId = agentNameToId[data.agent];
+
+          if (agentId) {
+            setAgents((current) =>
+              current.map((agent) =>
+                agent.id === agentId
+                  ? { ...agent, status: "completed" }
+                  : agent
+              )
+            );
+          }
+
+          setEvents((current) => [
+            {
+              id: `${Date.now()}-${Math.random()}`,
+              agent: data.agent,
+              status: "COMPLETED",
+              message: data.message || "Agent completed successfully.",
+            },
+            ...current,
+          ]);
+        }
+
+        if (data.type === "investigation_completed") {
+          setCompleted(true);
+          setResult(data.result);
+        }
+      } catch (error) {
+        console.error("Invalid WebSocket message:", error);
+      }
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, [investigationId]);
+
+  const completedAgents = useMemo(
+    () => agents.filter((agent) => agent.status === "completed").length,
+    [agents]
+  );
+
+  const progress = Math.round(
+    (completedAgents / agents.length) * 100
+  );
+
+  const summary = {
+    entities: result?.entities?.length ?? 7,
+    relationships: result?.relationships?.relationships?.length ?? 7,
+    sources: result?.sources?.source_count ?? 3,
+    verified:
+      result?.relationships?.verified_count ??
+      result?.verification?.verified_count ??
+      5,
+    risks: result?.risks?.length ?? 2,
+  };
+
+  return (
+    <div className="investigation-page">
+      <section className="investigation-hero">
+        <div>
+          <span className="eyebrow">LIVE INVESTIGATION</span>
+
+          <h1>Battery Supply Chain</h1>
+
+          <p>
+            Investigating upstream suppliers, manufacturers,
+            materials and geographic dependencies.
+          </p>
+
+          <div className="investigation-status">
+            <span
+              className={`status-dot ${
+                connected ? "connected" : "disconnected"
+              }`}
+            />
+
+            {completed
+              ? "Investigation complete"
+              : connected
+              ? "Investigation running"
+              : "Connecting to investigation engine..."}
+          </div>
+        </div>
+      </section>
+
+      <section className="glass-section progress-section">
+        <div className="section-heading-row">
+          <div>
+            <span className="section-label">INVESTIGATION PROGRESS</span>
+            <h2>{progress}%</h2>
+          </div>
+
+          <div className="progress-status">
+            <Clock3 size={17} />
+
+            {completed ? "Completed" : "Running"}
+          </div>
+        </div>
+
+        <div className="progress-track">
+          <div
+            className="progress-fill"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </section>
+
+      <section className="glass-section">
+        <div className="section-heading-row pipeline-heading">
+          <div>
+            <span className="section-label">AGENT PIPELINE</span>
+            <h2>Investigation Engine</h2>
+          </div>
+
+          <span className="agent-count">
+            {completedAgents}/{agents.length}
+          </span>
+        </div>
+
+        <div className="agent-list">
+          {agents.map((agent, index) => (
+            <div
+              key={agent.id}
+              className={`agent-row ${agent.status}`}
+            >
+              <div className="agent-step">
+                <div className="agent-icon">
+                  {agent.status === "completed" ? (
+                    <CheckCircle2 size={19} />
+                  ) : agent.status === "active" ? (
+                    <Sparkles size={19} />
+                  ) : (
+                    <Circle size={18} />
+                  )}
+                </div>
+
+                {index < agents.length - 1 && (
+                  <div className="agent-connector" />
+                )}
+              </div>
+
+              <div className="agent-content">
+                <div className="agent-title-row">
+                  <h3>{agent.name}</h3>
+
+                  <span className={`agent-status ${agent.status}`}>
+                    {agent.status === "completed"
+                      ? "Completed"
+                      : agent.status === "active"
+                      ? "Active"
+                      : "Waiting"}
+                  </span>
+                </div>
+
+                <p>{agent.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="glass-section">
+        <div className="section-heading-row">
+          <div>
+            <span className="section-label">LIVE ACTIVITY</span>
+            <h2>Investigation Timeline</h2>
+          </div>
+        </div>
+
+        <div className="event-feed">
+          {events.length === 0 ? (
+            <div className="empty-event">
+              <Sparkles size={20} />
+              Waiting for investigation events...
+            </div>
+          ) : (
+            events.slice(0, 8).map((event) => (
+              <div className="event-row" key={event.id}>
+                <div className="event-icon">
+                  {event.status === "COMPLETED" ? (
+                    <CheckCircle2 size={17} />
+                  ) : (
+                    <Sparkles size={17} />
+                  )}
+                </div>
+
+                <div className="event-content">
+                  <div>
+                    <strong>{event.agent}</strong>
+
+                    <span className="event-status">
+                      {event.status}
+                    </span>
+                  </div>
+
+                  <p>{event.message}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="glass-section">
+        <div className="section-heading">
+          <span className="section-label">DISCOVERY SUMMARY</span>
+          <h2>What the engine found</h2>
+        </div>
+
+        <div className="summary-grid">
+          <SummaryCard
+            icon={<Users size={22} />}
+            value={summary.entities}
+            label="Entities"
+          />
+
+          <SummaryCard
+            icon={<GitBranch size={22} />}
+            value={summary.relationships}
+            label="Relationships"
+          />
+
+          <SummaryCard
+            icon={<Globe2 size={22} />}
+            value={summary.sources}
+            label="Sources"
+          />
+
+          <SummaryCard
+            icon={<ShieldCheck size={22} />}
+            value={summary.verified}
+            label="Verified"
+          />
+
+          <SummaryCard
+            icon={<AlertTriangle size={22} />}
+            value={summary.risks}
+            label="Risk Signals"
+          />
+        </div>
+      </section>
+
+      {completed && (
+        <section className="completion-card">
+          <div className="completion-icon">
+            <CheckCircle2 size={28} />
+          </div>
+
+          <div className="completion-content">
+            <span>INVESTIGATION COMPLETE</span>
+
+            <h2>Your dependency intelligence graph is ready.</h2>
+
+            <p>
+              The investigation discovered <strong>{summary.entities}</strong>{" "}
+              entities and <strong>{summary.relationships}</strong>{" "}
+              relationships across <strong>{summary.sources}</strong> sources.
+            </p>
+          </div>
+
+          <button
+            className="graph-button"
+            onClick={() => navigate("/graph")}
+          >
+            Explore Dependency Graph
+            <ArrowRight size={18} />
+          </button>
+        </section>
+      )}
+    </div>
+  );
 }
 
-function AgentPipelineItem({ agent, last }: { agent: Agent; last: boolean }) { const Icon = agent.icon; return <div className="agent-pipeline-item"><div className="agent-status-column"><div className={`agent-status-circle ${agent.status}`}>{agent.status === "completed" ? <Check size={15} /> : agent.status === "running" ? <Loader2 size={15} className="spin" /> : <Icon size={14} />}</div>{!last && <div className={`agent-connector ${agent.status === "completed" ? "completed" : ""}`} />}</div><div className="agent-info"><div className="agent-name-row"><strong>{agent.name}</strong><AgentStatusBadge status={agent.status} /></div><p>{agent.description}</p></div></div>; }
-function AgentStatusBadge({ status }: { status: AgentStatus }) { return <span className={`agent-badge ${status}`}>{status === "completed" ? "Completed" : status === "running" ? "Running" : "Waiting"}</span>; }
-function ActivityEventItem({ event }: { event: ActivityEvent }) { const Icon = event.icon; return <div className="execution-event"><div className="event-icon"><Icon size={14} /></div><div className="event-content"><strong>{event.title}</strong><span>{event.description}</span><small>{event.time}</small></div></div>; }
-function DiscoveryCard({ icon: Icon, label, value, detail }: { icon: ElementType; label: string; value: string; detail: string }) { return <Card className="discovery-card"><div className="discovery-icon"><Icon size={19} /></div><div><span>{label}</span><strong>{value}</strong><small>{detail}</small></div></Card>; }
-function formatTime(seconds: number) { return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`; }
+function SummaryCard({
+  icon,
+  value,
+  label,
+}: {
+  icon: React.ReactNode;
+  value: number;
+  label: string;
+}) {
+  return (
+    <div className="summary-card">
+      <div className="summary-icon">{icon}</div>
+
+      <div className="summary-value">{value}</div>
+
+      <div className="summary-label">{label}</div>
+    </div>
+  );
+}
+
 export default InvestigationDetails;

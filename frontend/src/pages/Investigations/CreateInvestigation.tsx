@@ -18,7 +18,46 @@ function CreateInvestigation() {
   const [includeManufacturers, setIncludeManufacturers] = useState(true);
   const [sourceVerification, setSourceVerification] = useState(true);
   const canStart = goal.trim().length >= 20;
-  const handleStart = () => { if (canStart) navigate("/investigations/demo"); };
+  const handleStart = async () => {
+    if (!canStart) return;
+
+    try {
+      const response = await fetch(
+        "http://localhost:8000/api/investigations/",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            goal,
+            scope_manufacturers: includeManufacturers,
+            scope_materials: includeMaterials,
+            scope_geography: includeGeography,
+            scope_verification: sourceVerification,
+            depth,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Failed to start investigation"
+        );
+      }
+
+      const data = await response.json();
+
+      sessionStorage.setItem(
+        "active_investigation_id",
+        data.investigation.id
+      );
+
+      navigate("/investigations/demo");
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   return <PageContainer><div className="create-investigation animate-fade">
     <div className="investigation-page-header"><button className="back-button" onClick={() => navigate("/")}><ArrowLeft size={16} />Back to Overview</button><div className="investigation-title-row"><div><div className="eyebrow">NEW INVESTIGATION</div><h1>What should we investigate?</h1><p>Describe the dependency question in natural language. The investigation engine will determine what to research and how deeply to follow the dependency chain.</p></div><div className="investigation-title-icon"><Sparkles size={25} /></div></div></div>
