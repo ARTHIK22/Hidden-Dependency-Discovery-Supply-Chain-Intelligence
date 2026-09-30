@@ -1,23 +1,70 @@
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, String, Text
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.orm import Mapped, mapped_column
 
-
-class Base(DeclarativeBase):
-	pass
+from app.core.database import Base
 
 
 class Investigation(Base):
-	__tablename__ = "investigations"
+    __tablename__ = "investigations"
 
-	id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
-	goal: Mapped[str] = mapped_column(Text, nullable=False)
-	status: Mapped[str] = mapped_column(String(30), default="queued", nullable=False)
-	depth: Mapped[str] = mapped_column(String(30), default="deep", nullable=False)
-	scope_manufacturers: Mapped[bool] = mapped_column(Boolean, default=True)
-	scope_materials: Mapped[bool] = mapped_column(Boolean, default=True)
-	scope_geography: Mapped[bool] = mapped_column(Boolean, default=True)
-	scope_verification: Mapped[bool] = mapped_column(Boolean, default=True)
-	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+
+    organization_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    created_by: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+
+    description: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(50),
+        default="draft",
+        nullable=False,
+        index=True,
+    )
+
+    priority: Mapped[str] = mapped_column(
+        String(50),
+        default="medium",
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    target: Mapped[str | None] = mapped_column(String(500), nullable=True)
