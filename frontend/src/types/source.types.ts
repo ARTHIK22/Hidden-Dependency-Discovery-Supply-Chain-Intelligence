@@ -1,0 +1,2 @@
+export interface Source { id: string; name: string; source_type: string; url: string | null; publisher: string | null; description: string | null; reliability_score: number; metadata_json: Record<string, unknown> }
+export interface SourceCreate { name: string; source_type: string; url?: string | null; publisher?: string | null; description?: string | null; reliability_score?: number; metadata_json?: Record<string, unknown> }

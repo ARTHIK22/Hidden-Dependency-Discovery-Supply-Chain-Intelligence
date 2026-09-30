@@ -1,0 +1,4 @@
+export interface Entity { id: string; name: string; entity_type: string; legal_name: string | null; canonical_name: string | null; registration_number: string | null; country: string | null; website: string | null; description: string | null; identifiers: Record<string, string>; metadata_json: Record<string, unknown>; status: string; created_at: string; updated_at: string }
+export interface EntityCreate { name: string; entity_type: string; canonical_name?: string | null; legal_name?: string | null; registration_number?: string | null; country?: string | null; website?: string | null; description?: string | null; identifiers?: Record<string, string>; metadata_json?: Record<string, unknown> }
+export type EntityUpdate = Partial<EntityCreate> & { status?: string };
+export interface EntityAlias { id: string; entity_id: string; alias: string; alias_type: string }
