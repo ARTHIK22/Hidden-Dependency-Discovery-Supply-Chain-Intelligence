@@ -3,14 +3,24 @@ import { API_BASE_URL } from "../../config/env";
 export class ApiError extends Error {
   readonly status: number;
   readonly payload: unknown;
+  readonly details: unknown;
 
   constructor(message: string, status: number, payload: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.payload = payload;
+    this.details = payload;
   }
 }
+
+export type ApiQueryValue = string | number | boolean | null | undefined;
+export type ApiParams = Readonly<Record<string, ApiQueryValue>>;
+export type ApiRequestOptions = {
+  params?: ApiParams;
+  signal?: AbortSignal;
+  headers?: HeadersInit;
+};
 
 export function apiUrl(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -38,7 +48,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   if (response.status === 204) return undefined as T;
 
   const contentType = response.headers.get("content-type") ?? "";
-  const payload: unknown = contentType.includes("application/json")
+  const payload: unknown = contentType.includes("application/json") || contentType.includes("+json")
     ? await response.json().catch(() => null)
     : await response.text().catch(() => "");
 
@@ -76,6 +86,73 @@ export const patch = <T>(path: string, body?: unknown) =>
 
 export const remove = <T = void>(path: string) =>
   request<T>(path, { method: "DELETE" });
+
+function withParams(path: string, params?: ApiParams): string {
+  if (!params) return path;
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") {
+      search.set(key, String(value));
+    }
+  }
+  const encoded = search.toString();
+  if (!encoded) return path;
+  return `${path}${path.includes("?") ? "&" : "?"}${encoded}`;
+}
+
+function isAbortSignal(value: unknown): value is AbortSignal {
+  return typeof value === "object" && value !== null &&
+    "aborted" in value && "addEventListener" in value;
+}
+
+function getOptions(
+  value?: ApiParams | ApiRequestOptions | AbortSignal,
+  config?: ApiRequestOptions,
+): ApiRequestOptions {
+  if (config) {
+    return {
+      ...config,
+      params: value && !isAbortSignal(value) && !("params" in value) && !("signal" in value) && !("headers" in value)
+        ? value as ApiParams
+        : config.params,
+    };
+  }
+  if (!value) return {};
+  if (isAbortSignal(value)) return { signal: value };
+  if ("params" in value || "signal" in value || "headers" in value) {
+    return value as ApiRequestOptions;
+  }
+  return { params: value as ApiParams };
+}
+
+function send<T>(method: string, path: string, body?: unknown, options: ApiRequestOptions = {}) {
+  return request<T>(withParams(path, options.params), {
+    method,
+    signal: options.signal,
+    headers: options.headers,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+}
+
+// Feature APIs use this shared fetch client so URL, query, JSON and error handling
+// stay consistent across the application.
+export const apiClient = {
+  get<T>(path: string, paramsOrOptions?: ApiParams | ApiRequestOptions | AbortSignal, config?: ApiRequestOptions) {
+    return send<T>("GET", path, undefined, getOptions(paramsOrOptions, config));
+  },
+  post<T>(path: string, body?: unknown, options?: ApiRequestOptions) {
+    return send<T>("POST", path, body, options);
+  },
+  put<T>(path: string, body?: unknown, options?: ApiRequestOptions) {
+    return send<T>("PUT", path, body, options);
+  },
+  patch<T>(path: string, body?: unknown, options?: ApiRequestOptions) {
+    return send<T>("PATCH", path, body, options);
+  },
+  delete<T = void>(path: string, options?: ApiRequestOptions) {
+    return send<T>("DELETE", path, undefined, options);
+  },
+};
 
 export function queryString(values: Record<string, string | number | boolean | undefined>): string {
   const params = new URLSearchParams();

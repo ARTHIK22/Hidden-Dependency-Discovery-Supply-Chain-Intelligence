@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { authStore } from "../stores/auth.store";
 import { getCurrentUser } from "../features/auth/auth.api";
+import type { User } from "../types/user.types";
 
 export function useAuth() {
   const state = useSyncExternalStore(authStore.subscribe, authStore.getSnapshot, authStore.getSnapshot);
@@ -12,7 +13,7 @@ export function useAuth() {
   useEffect(() => {
     if (!authStore.hasToken() || state.user || !state.loading) return;
     let active = true;
-    getCurrentUser().then((user) => { if (active) authStore.setUser(user); }).catch(() => { if (active) authStore.clear(); });
+    getCurrentUser().then((user: User) => { if (active) authStore.setUser(user); }).catch(() => { if (active) authStore.clear(); });
     return () => { active = false; };
   }, [state.loading, state.user]);
   return { ...state, logout: authStore.clear };

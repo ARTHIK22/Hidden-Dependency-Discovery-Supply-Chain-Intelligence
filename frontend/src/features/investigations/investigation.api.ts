@@ -6,11 +6,19 @@ import type {
   InvestigationDetail,
 } from "../../types/api.types";
 
-export const listInvestigations = (q?: string, signal?: AbortSignal) =>
-  get<ApiList<Investigation>>(
-    `/investigations${queryString({ q, limit: 100 })}`,
+export type InvestigationListParams = {
+  q?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export const listInvestigations = (params?: string | InvestigationListParams, signal?: AbortSignal) => {
+  const filters = typeof params === "string" ? { q: params } : params;
+  return get<ApiList<Investigation>>(
+    `/investigations${queryString({ limit: 100, ...filters })}`,
     signal,
   );
+};
 
 export const createInvestigation = (input: InvestigationCreate) =>
   post<{ investigation: Investigation }>("/investigations", input);

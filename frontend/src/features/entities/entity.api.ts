@@ -1,8 +1,20 @@
 import { get, post, queryString, remove } from "../../services/api/client";
 import type { ApiList, Entity, EntityDetail, WatchlistEntry } from "../../types/api.types";
 
-export const listEntities = (q?: string, signal?: AbortSignal) =>
-  get<ApiList<Entity>>(`/entities${queryString({ q, limit: 250 })}`, signal);
+export type EntityListParams = {
+  q?: string;
+  entity_type?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export const listEntities = (params?: string | EntityListParams, signal?: AbortSignal) => {
+  const filters = typeof params === "string" ? { q: params } : params;
+  return get<ApiList<Entity>>(
+    `/entities${queryString({ limit: 250, ...filters })}`,
+    signal,
+  );
+};
 
 export const getEntity = (id: string, signal?: AbortSignal) =>
   get<EntityDetail>(`/entities/${encodeURIComponent(id)}`, signal);
