@@ -7,6 +7,7 @@ import "./index.css";
 import "./styles/variables.css";
 import "./styles/globals.css";
 import "./styles/animations.css";
+import "./styles/integration.css";
 
 ReactDOM.createRoot(
   document.getElementById("root")!

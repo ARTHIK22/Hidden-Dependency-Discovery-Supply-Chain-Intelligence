@@ -1,0 +1,1 @@
+export interface Alert { id: string; investigation_id: string | null; entity_id: string | null; alert_type: string; severity: string; title: string; message: string; is_read: boolean; created_at: string }

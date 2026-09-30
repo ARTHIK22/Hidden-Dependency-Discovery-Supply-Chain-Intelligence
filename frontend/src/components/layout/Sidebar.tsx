@@ -1,6 +1,9 @@
 import {
 	LayoutDashboard,
 	Search,
+	Building2,
+	GitBranch,
+	Globe2,
 	Network,
 	FileSearch,
 	ShieldAlert,
@@ -16,7 +19,10 @@ import "./sidebar.css";
 
 const navigation = [
 	{ label: "Overview", icon: LayoutDashboard, path: "/" },
-	{ label: "Research", icon: Search, path: "/research" },
+	{ label: "Investigations", icon: Search, path: "/investigations" },
+	{ label: "Entities", icon: Building2, path: "/entities" },
+	{ label: "Relationships", icon: GitBranch, path: "/relationships" },
+	{ label: "Sources", icon: Globe2, path: "/sources" },
 	{ label: "Dependency Graph", icon: Network, path: "/graph" },
 	{ label: "Evidence", icon: FileSearch, path: "/evidence" },
 	{ label: "Risks", icon: ShieldAlert, path: "/risks" },
@@ -79,8 +85,8 @@ function Sidebar() {
 				<div className="sidebar-status">
 					<span className="status-dot" />
 					<div>
-						<strong>Intelligence Engine</strong>
-						<small>Ready for investigation</small>
+						<strong>Backend connection</strong>
+						<small>Stored-data analysis available</small>
 					</div>
 				</div>
 			</div>

@@ -2,11 +2,17 @@ import {
 	Search,
 	Bell,
 	Command,
+	LogOut,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 import "./header.css";
 
 function Header() {
+	const navigate = useNavigate();
+	const { user, logout } = useAuth();
 	return (
 		<header className="app-header">
 			<div className="header-search">
@@ -23,22 +29,22 @@ function Header() {
 			</div>
 
 			<div className="header-actions">
-				<button
+				<Link
+					to="/alerts"
 					className="header-icon-button"
 					aria-label="Notifications"
-					type="button"
 				>
 					<Bell size={18} />
-					<span className="notification-dot" />
-				</button>
+				</Link>
 
-				<div className="profile-button">
-					<div className="profile-avatar">A</div>
+				<button className="profile-button" type="button" onClick={() => { logout(); navigate("/login", { replace: true }); }} aria-label="Sign out">
+					<div className="profile-avatar">{user?.full_name?.charAt(0)?.toUpperCase() ?? "U"}</div>
 					<div className="profile-info">
-						<strong>Arthik</strong>
-						<span>Analyst</span>
+						<strong>{user?.full_name ?? "User"}</strong>
+						<span>{user?.role ?? "Analyst"}</span>
 					</div>
-				</div>
+					<LogOut size={15} aria-hidden="true" />
+				</button>
 			</div>
 		</header>
 	);

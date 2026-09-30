@@ -1,9 +1,9 @@
-# backend/app/main.py
-
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.router import api_router
 from app.core.config import settings
@@ -14,9 +14,6 @@ from app.core.exceptions import (
     unexpected_exception_handler,
     validation_exception_handler,
 )
-from fastapi import HTTPException
-from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.logging import get_logger, setup_logging
 from app.core.middleware import request_logging_middleware
 
@@ -26,7 +23,6 @@ from app.core.middleware import request_logging_middleware
 # ---------------------------------------------------------
 
 setup_logging()
-
 logger = get_logger(__name__)
 
 
@@ -42,10 +38,7 @@ async def lifespan(app: FastAPI):
         settings.APP_VERSION,
     )
 
-    logger.info(
-        "Environment: %s",
-        settings.APP_ENV,
-    )
+    logger.info("Environment: %s", settings.APP_ENV)
 
     yield
 
@@ -75,7 +68,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -83,45 +79,54 @@ app.add_middleware(
 
 
 # ---------------------------------------------------------
-# REQUEST LOGGING MIDDLEWARE
+# REQUEST LOGGING
 # ---------------------------------------------------------
 
-app.middleware("http")(
-    request_logging_middleware,
-)
+app.middleware("http")(request_logging_middleware)
 
 
 # ---------------------------------------------------------
-# EXCEPTION HANDLER
+# EXCEPTION HANDLERS
 # ---------------------------------------------------------
 
 app.add_exception_handler(
     AppException,
     app_exception_handler,
 )
-app.add_exception_handler(StarletteHTTPException, http_exception_handler)
-app.add_exception_handler(HTTPException, http_exception_handler)
-app.add_exception_handler(RequestValidationError, validation_exception_handler)
-app.add_exception_handler(Exception, unexpected_exception_handler)
+
+app.add_exception_handler(
+    StarletteHTTPException,
+    http_exception_handler,
+)
+
+app.add_exception_handler(
+    HTTPException,
+    http_exception_handler,
+)
+
+app.add_exception_handler(
+    RequestValidationError,
+    validation_exception_handler,
+)
+
+app.add_exception_handler(
+    Exception,
+    unexpected_exception_handler,
+)
 
 
 # ---------------------------------------------------------
 # API ROUTES
 # ---------------------------------------------------------
 
-app.include_router(
-    api_router,
-)
+app.include_router(api_router)
 
 
 # ---------------------------------------------------------
-# ROOT ENDPOINT
+# ROOT
 # ---------------------------------------------------------
 
-@app.get(
-    "/",
-    tags=["System"],
-)
+@app.get("/", tags=["System"])
 async def root():
     return {
         "success": True,
@@ -137,10 +142,7 @@ async def root():
 # API INFORMATION
 # ---------------------------------------------------------
 
-@app.get(
-    "/api",
-    tags=["System"],
-)
+@app.get("/api", tags=["System"])
 async def api_info():
     return {
         "success": True,
@@ -148,4 +150,20 @@ async def api_info():
         "version": settings.APP_VERSION,
         "api_version": "v1",
         "status": "online",
+    }
+
+
+# ---------------------------------------------------------
+# CORS DEBUG
+# ---------------------------------------------------------
+
+@app.get("/api/v1/cors-test", tags=["System"])
+async def cors_test():
+    return {
+        "success": True,
+        "message": "CORS is working correctly",
+        "allowed_frontend": [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ],
     }

@@ -1,0 +1,10 @@
+import { apiClient } from "../../services/api/client";
+import type { Investigation, InvestigationCreate, InvestigationStep, InvestigationUpdate } from "../../types/investigation.types";
+export const listInvestigations = (params: { status?: string; limit?: number; offset?: number } = {}) => apiClient.get<Investigation[]>("/investigations", params);
+export const createInvestigation = (payload: InvestigationCreate) => apiClient.post<Investigation>("/investigations", payload);
+export const getInvestigation = (id: string) => apiClient.get<Investigation>(`/investigations/${encodeURIComponent(id)}`);
+export const updateInvestigation = (id: string, payload: InvestigationUpdate) => apiClient.patch<Investigation>(`/investigations/${encodeURIComponent(id)}`, payload);
+export const startInvestigation = (id: string) => apiClient.post<Investigation>(`/investigations/${encodeURIComponent(id)}/start`);
+export const pauseInvestigation = (id: string) => apiClient.post<Investigation>(`/investigations/${encodeURIComponent(id)}/pause`);
+export const archiveInvestigation = (id: string) => apiClient.delete<void>(`/investigations/${encodeURIComponent(id)}`);
+export const getInvestigationSteps = (id: string) => apiClient.get<InvestigationStep[]>(`/investigations/${encodeURIComponent(id)}/steps`);

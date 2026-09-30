@@ -1,0 +1,3 @@
+export interface Relationship { id: string; source_entity_id: string; target_entity_id: string; relationship_type: string; description: string | null; confidence_score: number; verification_status: string; strength: number; metadata_json: Record<string, unknown>; discovered_at: string; updated_at: string }
+export interface RelationshipCreate { source_entity_id: string; target_entity_id: string; relationship_type: string; description?: string | null; confidence_score?: number; metadata_json?: Record<string, unknown> }
+export interface RelationshipVerification { relationship: Relationship; verification: Record<string, unknown> }
