@@ -1,41 +1,299 @@
-import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
-import { AlertTriangle, ArrowRight, Building2, ChevronRight, ExternalLink, Factory, FileSearch, Filter, Globe2, Package, Search, ShieldCheck, X } from "lucide-react";
+import {
+  Background,
+  Controls,
+  Handle,
+  MiniMap,
+  Position,
+  ReactFlow,
+  useEdgesState,
+  useNodesState,
+  type Edge,
+  type Node,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  AlertTriangle,
+  Building2,
+  ExternalLink,
+  Factory,
+  Filter,
+  MapPin,
+  Network,
+  Package,
+  Search,
+  ShieldCheck,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import "./graph.css";
+import { getDependencyGraph } from "../../features/relationships/relationship.api";
+import { ErrorState, LoadingState } from "../../components/states/AsyncStates";
+import type { GraphNode } from "../../types/api.types";
 
-type NodeType = "company" | "supplier" | "manufacturer" | "material" | "facility" | "region";
-type GraphNode = { id: string; label: string; type: NodeType; x: number; y: number; risk?: "low" | "medium" | "high"; description: string };
-type GraphEdge = { id: string; source: string; target: string; relationship: string; confidence: number; evidence: string; verified: boolean };
-const nodes: GraphNode[] = [
- { id: "company", label: "Your Company", type: "company", x: 120, y: 300, risk: "low", description: "Your organization's supply-chain entry point." },
- { id: "supplier-a", label: "Supplier A", type: "supplier", x: 350, y: 180, risk: "medium", description: "Primary battery component supplier." },
- { id: "supplier-b", label: "Supplier B", type: "supplier", x: 350, y: 430, risk: "high", description: "Secondary supplier with regional concentration." },
- { id: "factory-x", label: "Factory X", type: "manufacturer", x: 610, y: 180, risk: "medium", description: "Battery cell manufacturing facility." },
- { id: "raw-material", label: "Lithium", type: "material", x: 610, y: 430, risk: "high", description: "Critical raw material used in battery production." },
- { id: "facility-d", label: "Processing Facility D", type: "facility", x: 850, y: 430, risk: "high", description: "Lithium processing and refinement facility." },
- { id: "region-a", label: "Region A", type: "region", x: 850, y: 180, risk: "medium", description: "Geographic dependency identified during investigation." },
-];
-const edges: GraphEdge[] = [
- { id: "e1", source: "company", target: "supplier-a", relationship: "SUPPLIES", confidence: 96, evidence: "Supplier relationship found across procurement and company sources.", verified: true },
- { id: "e2", source: "company", target: "supplier-b", relationship: "SUPPLIES", confidence: 91, evidence: "Supplier B identified through supplier disclosures.", verified: true },
- { id: "e3", source: "supplier-a", target: "factory-x", relationship: "MANUFACTURES", confidence: 94, evidence: "Manufacturing relationship confirmed through company documentation.", verified: true },
- { id: "e4", source: "supplier-b", target: "raw-material", relationship: "USES_MATERIAL", confidence: 88, evidence: "Material dependency extracted from manufacturing information.", verified: true },
- { id: "e5", source: "factory-x", target: "region-a", relationship: "LOCATED_IN", confidence: 99, evidence: "Facility location confirmed from public facility information.", verified: true },
- { id: "e6", source: "raw-material", target: "facility-d", relationship: "PROCESSES", confidence: 83, evidence: "Processing dependency identified from industry sources.", verified: true },
- { id: "e7", source: "facility-d", target: "region-a", relationship: "LOCATED_IN", confidence: 97, evidence: "Facility geographic location verified.", verified: true },
-];
-const nodeIcons = { company: Building2, supplier: Package, manufacturer: Factory, material: Package, facility: Factory, region: Globe2 };
+type EntityType = string;
 
-function DependencyGraph() {
- const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null); const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null); const [search, setSearch] = useState(""); const [showFilters, setShowFilters] = useState(false); const [riskOnly, setRiskOnly] = useState(false);
- const filteredNodes = useMemo(() => nodes.filter((node) => (!search || node.label.toLowerCase().includes(search.toLowerCase())) && (!riskOnly || node.risk === "high" || node.risk === "medium")), [search, riskOnly]);
- const getNode = (id: string) => nodes.find((node) => node.id === id); const visibleEdges = edges.filter((edge) => filteredNodes.some((node) => node.id === edge.source) && filteredNodes.some((node) => node.id === edge.target));
- return <div className="graph-page"><div className="graph-header"><div><div className="graph-eyebrow"><span className="live-dot" />DEPENDENCY INTELLIGENCE</div><h1>Dependency Graph</h1><p>Explore how suppliers, manufacturers, materials and regions connect across your supply chain.</p></div><div className="graph-header-actions"><div className="graph-search"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search entities..." /></div><button className={`glass-action ${showFilters ? "active" : ""}`} onClick={() => setShowFilters(!showFilters)}><Filter size={17} />Filters</button></div></div>
- {showFilters && <div className="filter-bar glass-panel"><div className="filter-title"><Filter size={16} />Graph Filters</div><button className={`filter-chip ${riskOnly ? "selected" : ""}`} onClick={() => setRiskOnly(!riskOnly)}><AlertTriangle size={14} />Risk Dependencies</button><button className="filter-chip" onClick={() => { setRiskOnly(false); setSearch(""); }}>Reset</button></div>}
- <div className="graph-layout"><section className="graph-canvas glass-panel"><div className="canvas-toolbar"><div className="toolbar-title"><span className="status-indicator" />Battery Supply Chain</div><div className="canvas-meta">{nodes.length} entities · {edges.length} relationships</div></div><div className="graph-area"><svg className="dependency-svg" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid meet"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#a97858" /></marker></defs>{visibleEdges.map((edge) => { const source = getNode(edge.source); const target = getNode(edge.target); if (!source || !target) return null; return <g key={edge.id} className={`graph-edge ${selectedEdge?.id === edge.id ? "selected-edge" : ""}`} onClick={() => { setSelectedEdge(edge); setSelectedNode(null); }}><line x1={source.x} y1={source.y} x2={target.x} y2={target.y} markerEnd="url(#arrow)" /><text x={(source.x + target.x) / 2} y={(source.y + target.y) / 2 - 8} textAnchor="middle">{edge.relationship}</text></g>; })}{filteredNodes.map((node) => { const Icon = nodeIcons[node.type]; return <g key={node.id} className={`graph-node ${selectedNode?.id === node.id ? "selected-node" : ""}`} onClick={() => { setSelectedNode(node); setSelectedEdge(null); }} transform={`translate(${node.x}, ${node.y})`}><circle className="node-glow" r="48" /><circle className={`node-circle node-${node.type}`} r="36" /><foreignObject x="-16" y="-16" width="32" height="32"><div className="node-icon"><Icon size={20} /></div></foreignObject><text className="node-label" y="60">{node.label}</text>{node.risk === "high" && <circle className="risk-dot" cx="27" cy="-27" r="7" />}</g>; })}</svg><div className="graph-legend"><div><span className="legend-dot company" />Company</div><div><span className="legend-dot supplier" />Supplier</div><div><span className="legend-dot material" />Material</div><div><span className="legend-dot facility" />Facility</div><div><span className="legend-dot region" />Region</div></div></div></section>
- <aside className="graph-inspector glass-panel">{!selectedNode && !selectedEdge ? <div className="inspector-empty"><div className="empty-icon"><ChevronRight size={24} /></div><h3>Explore the graph</h3><p>Select an entity or relationship to inspect its dependencies, evidence and verification status.</p><div className="explorer-hint"><span>Tip</span>Click any edge to understand why the relationship exists.</div></div> : selectedNode ? <NodeInspector node={selectedNode} onClose={() => setSelectedNode(null)} /> : <EdgeInspector edge={selectedEdge!} onClose={() => setSelectedEdge(null)} getNode={getNode} />}</aside></div></div>;
+type EntityNodeData = Record<string, unknown> & {
+  label: string;
+  type: EntityType;
+  risk: number;
+  status: string;
+};
+
+const entityIcons: Record<string, LucideIcon> = {
+  company: Building2,
+  supplier: Building2,
+  manufacturer: Factory,
+  material: Package,
+  facility: Factory,
+  region: MapPin,
+};
+
+function EntityNode({ data }: { data: EntityNodeData }) {
+  const Icon = entityIcons[data.type] ?? Building2;
+  const riskClass =
+    data.risk >= 85
+      ? "critical"
+      : data.risk >= 70
+        ? "high"
+        : data.risk >= 50
+          ? "medium"
+          : "low";
+
+  return (
+    <div className={`graph-node ${riskClass}`}>
+      <Handle type="target" position={Position.Left} />
+      <div className="graph-node-icon"><Icon size={17} /></div>
+      <div className="graph-node-content">
+        <strong>{data.label}</strong>
+        <span>{data.status}</span>
+      </div>
+      <div className="graph-node-risk">{data.risk}</div>
+      <Handle type="source" position={Position.Right} />
+    </div>
+  );
 }
-function NodeInspector({ node, onClose }: { node: GraphNode; onClose: () => void }) { const Icon = nodeIcons[node.type]; const connections = edges.filter((edge) => edge.source === node.id || edge.target === node.id); return <><InspectorHeader icon={<Icon size={20} />} className={`inspector-icon node-${node.type}`} onClose={onClose} /><div className="inspector-type">{node.type.replace("_", " ").toUpperCase()}</div><h2>{node.label}</h2><p className="inspector-description">{node.description}</p><div className={`risk-badge ${node.risk}`}><AlertTriangle size={14} />{node.risk?.toUpperCase()} DEPENDENCY RISK</div><div className="inspector-section"><div className="section-label">Connections</div><div className="connection-count">{connections.length}<span>relationships discovered</span></div></div><div className="inspector-section"><div className="section-label">Relationships</div><div className="relationship-list">{connections.map((edge) => <div className="relationship-row" key={edge.id}><span>{edge.relationship}</span><ArrowRight size={14} /></div>)}</div></div></>; }
-function InspectorHeader({ icon, className, onClose }: { icon: ReactNode; className: string; onClose: () => void }) { return <div className="inspector-header"><div className={className}>{icon}</div><button className="close-button" onClick={onClose}><X size={17} /></button></div>; }
-function EdgeInspector({ edge, onClose, getNode }: { edge: GraphEdge; onClose: () => void; getNode: (id: string) => GraphNode | undefined }) { const source = getNode(edge.source); const target = getNode(edge.target); return <><InspectorHeader icon={<ArrowRight size={20} />} className="edge-inspector-icon" onClose={onClose} /><div className="inspector-type">RELATIONSHIP</div><h2>{edge.relationship}</h2><div className="relationship-path"><strong>{source?.label}</strong><ArrowRight size={15} /><strong>{target?.label}</strong></div><div className="confidence-card"><div><span>Confidence</span><strong>{edge.confidence}%</strong></div><div className="confidence-track"><div className="confidence-fill" style={{ width: `${edge.confidence}%` }} /></div></div>{edge.verified && <div className="verified-card"><ShieldCheck size={18} /><div><strong>Verified relationship</strong><span>Evidence-backed connection</span></div></div>}<div className="inspector-section"><div className="section-label">Evidence</div><div className="evidence-card"><p>{edge.evidence}</p><button>View source<ExternalLink size={13} /></button></div></div><div className="inspector-section"><div className="section-label">Relationship metadata</div><div className="metadata-row"><span>Relationship type</span><strong>{edge.relationship}</strong></div><div className="metadata-row"><span>Verification</span><strong>Verified</strong></div><div className="metadata-row"><span>Last verified</span><strong>Today</strong></div></div></>; }
-export default DependencyGraph;
+
+const nodeTypes = { entity: EntityNode };
+
+export default function DependencyGraph() {
+  const navigate = useNavigate();
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<EntityNodeData>>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [riskOnly, setRiskOnly] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getDependencyGraph(controller.signal)
+      .then((graph) => {
+        setNodes(graph.nodes.map((node: GraphNode) => ({ ...node, type: "entity", data: { ...node.data, type: normalizeEntityType(node.data.type) } })));
+        setEdges(graph.edges as Edge[]);
+        setLoadError(false);
+      })
+      .catch((cause) => { if (!controller.signal.aborted) { console.error(cause); setLoadError(true); } })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [setNodes, setEdges]);
+  const connectedNodeIds = useMemo(() => {
+    const connected = new Set<string>();
+
+    if (selectedId) {
+      edges.forEach((edge) => {
+        if (edge.source === selectedId) connected.add(edge.target);
+        if (edge.target === selectedId) connected.add(edge.source);
+      });
+    }
+
+    return connected;
+  }, [edges, selectedId]);
+
+  const filteredNodes = useMemo(() => {
+    const query = search.toLowerCase();
+    return nodes
+      .filter((node) => {
+        const matchesSearch = node.data.label.toLowerCase().includes(query);
+        const matchesRisk = !riskOnly || node.data.risk >= 70;
+        return matchesSearch && matchesRisk;
+      })
+      .map((node) => ({
+        ...node,
+        style: {
+          opacity:
+            selectedId &&
+            node.id !== selectedId &&
+            !connectedNodeIds.has(node.id)
+              ? 0.28
+              : 1,
+          transition: "opacity 180ms ease",
+        },
+      }));
+  }, [nodes, search, riskOnly, selectedId, connectedNodeIds]);
+
+  const selectedNode = nodes.find((node) => node.id === selectedId);
+  const selectedRelationship = edges.find((edge) => edge.source === selectedId || edge.target === selectedId);
+  const verificationStatus = (selectedRelationship?.data as { verificationStatus?: string } | undefined)?.verificationStatus;
+  const visibleNodeIds = new Set(filteredNodes.map((node) => node.id));
+  const visibleEdges = edges
+    .filter(
+      (edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target),
+    )
+    .map((edge) => {
+      const isConnected = edge.source === selectedId || edge.target === selectedId;
+      return {
+        ...edge,
+        animated: isConnected,
+        style: {
+          stroke: isConnected ? "var(--clay-dark)" : "var(--clay-light)",
+          strokeWidth: isConnected ? 2.8 : 1.7,
+        },
+      };
+    });
+
+  const handleNodeClick = (_event: MouseEvent, node: Node<EntityNodeData>) => {
+    setSelectedId(node.id);
+  };
+
+  return (
+    <div className="graph-page">
+      <div className="graph-header">
+        <div>
+          <span className="eyebrow">INTELLIGENCE GRAPH</span>
+          <h1>Dependency Graph</h1>
+          <p>Explore hidden relationships and upstream dependencies.</p>
+        </div>
+        <div className="graph-header-stats">
+          <div><strong>{nodes.length}</strong><span>Entities</span></div>
+          <div><strong>{edges.length}</strong><span>Relationships</span></div>
+          <div><strong>{nodes.filter((node) => node.data.risk >= 70).length}</strong><span>High Risk</span></div>
+        </div>
+      </div>
+
+      <div className="graph-toolbar">
+        <div className="graph-search">
+          <Search size={17} />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search entities..."
+          />
+          {search && (
+            <button aria-label="Clear search" onClick={() => setSearch("")}>
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <button
+          className={`graph-filter ${riskOnly ? "active" : ""}`}
+          onClick={() => setRiskOnly((value) => !value)}
+        >
+          <Filter size={15} />
+          High Risk
+        </button>
+      </div>
+
+      <div className="graph-workspace">
+        <ReactFlow
+          nodes={filteredNodes}
+          edges={visibleEdges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={handleNodeClick}
+          nodeTypes={nodeTypes}
+          fitView
+          minZoom={0.3}
+          maxZoom={1.8}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background gap={24} size={1} />
+          <Controls />
+          <MiniMap
+            nodeColor={(node) => {
+              const risk = Number((node.data as EntityNodeData | undefined)?.risk ?? 0);
+              if (risk >= 85) return "#b56f68";
+              if (risk >= 70) return "#c39b55";
+              if (risk >= 50) return "#a97858";
+              return "#758d68";
+            }}
+          />
+        </ReactFlow>
+
+        {loading && <div className="graph-data-overlay"><LoadingState label="Loading dependency graph..." /></div>}
+        {!loading && loadError && <div className="graph-data-overlay"><ErrorState title="Dependency graph is unavailable" description="Check the backend and PostgreSQL connection." action={() => window.location.reload()} /></div>}
+        {!loading && !loadError && nodes.length === 0 && <div className="graph-data-overlay"><div className="empty-state glass-card"><Network size={24} /><h3>No dependency records yet</h3><p>The graph will display entities and relationships once they are persisted.</p></div></div>}
+
+        {selectedNode && (
+          <aside className="graph-inspector">
+            <button className="inspector-close" aria-label="Close entity details" onClick={() => setSelectedId(null)}>
+              <X size={17} />
+            </button>
+            <div className="inspector-icon">
+              {(() => {
+                const Icon = entityIcons[selectedNode.data.type] ?? Building2;
+                return <Icon size={21} />;
+              })()}
+            </div>
+            <span className="eyebrow">ENTITY</span>
+            <h2>{selectedNode.data.label}</h2>
+            <div
+              className={`inspector-risk ${
+                selectedNode.data.risk >= 85
+                  ? "critical"
+                  : selectedNode.data.risk >= 70
+                    ? "high"
+                    : "normal"
+              }`}
+            >
+              <div>
+                <span>Risk Score</span>
+                <strong>{selectedNode.data.risk}/100</strong>
+              </div>
+              <AlertTriangle size={18} />
+            </div>
+            <div className="inspector-section">
+              <span>Status</span>
+              <strong>{selectedNode.data.status}</strong>
+            </div>
+            <div className="inspector-section">
+              <span>Entity Type</span>
+              <strong>{selectedNode.data.type}</strong>
+            </div>
+            <div className="inspector-section">
+              <span>Verification</span>
+              <strong className="verified"><ShieldCheck size={15} />{verificationStatus || "No evidence status recorded"}</strong>
+            </div>
+            <div className="inspector-actions">
+              <button onClick={() => navigate("/evidence")}>
+                <ExternalLink size={15} />
+                View Evidence
+              </button>
+              <button
+                onClick={() => {
+                  const nodeId = selectedNode?.id;
+
+                  if (!nodeId) return;
+
+                  const connected = edges.filter(
+                    (edge) => edge.source === nodeId || edge.target === nodeId,
+                  );
+
+                  console.log("Connected dependencies:", connected);
+                }}
+              >
+                Explore Dependencies
+              </button>
+            </div>
+          </aside>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function normalizeEntityType(type: string): EntityType {
+  return type.toLowerCase();
+}

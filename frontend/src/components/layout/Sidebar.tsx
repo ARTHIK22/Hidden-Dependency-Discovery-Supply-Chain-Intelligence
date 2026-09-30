@@ -2,7 +2,7 @@ import {
 	LayoutDashboard,
 	Search,
 	Network,
-	FileSearch,
+	FolderSearch,
 	ShieldAlert,
 	Bell,
 	Star,
@@ -15,11 +15,12 @@ import { NavLink } from "react-router-dom";
 import "./sidebar.css";
 
 const navigation = [
-	{ label: "Overview", icon: LayoutDashboard, path: "/" },
-	{ label: "Research", icon: Search, path: "/research" },
+	{ label: "Dashboard", icon: LayoutDashboard, path: "/" },
+	{ label: "Investigations", icon: FolderSearch, path: "/investigations" },
 	{ label: "Dependency Graph", icon: Network, path: "/graph" },
-	{ label: "Evidence", icon: FileSearch, path: "/evidence" },
-	{ label: "Risks", icon: ShieldAlert, path: "/risks" },
+	{ label: "Entities", icon: Search, path: "/entities" },
+	{ label: "Evidence", icon: FileText, path: "/evidence" },
+	{ label: "Risk Intelligence", icon: ShieldAlert, path: "/risks" },
 	{ label: "Alerts", icon: Bell, path: "/alerts" },
 	{ label: "Watchlist", icon: Star, path: "/watchlist" },
 	{ label: "Reports", icon: FileText, path: "/reports" },
@@ -71,10 +72,15 @@ function Sidebar() {
 			</div>
 
 			<div className="sidebar-bottom">
-				<button className="sidebar-item" type="button">
+				<NavLink
+					to="/settings"
+					className={({ isActive }) =>
+						`sidebar-item ${isActive ? "active" : ""}`
+					}
+				>
 					<Settings size={18} strokeWidth={1.8} />
 					<span>Settings</span>
-				</button>
+				</NavLink>
 
 				<div className="sidebar-status">
 					<span className="status-dot" />

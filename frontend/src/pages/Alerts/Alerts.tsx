@@ -1,212 +1,75 @@
-import {
-  AlertTriangle,
-  ArrowRight,
-  Bell,
-  CheckCircle2,
-  Clock3,
-  ShieldAlert,
-  ShieldCheck,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ArrowRight, Bell, CheckCircle2, Clock3, ShieldAlert, ShieldCheck } from "lucide-react";
+import { dismissAlert, listAlerts, markAlertRead } from "../../features/alerts/alert.api";
+import { ErrorState, LoadingState } from "../../components/states/AsyncStates";
+import type { Alert } from "../../types/api.types";
 import "./alerts.css";
 
-type AlertItem = {
-  id: number;
-  type: "critical" | "high" | "verification" | "resolved";
-  title: string;
-  entity: string;
-  description: string;
-  time: string;
-  score?: number;
-};
-
-const alerts: AlertItem[] = [
-  {
-    id: 1,
-    type: "critical",
-    title: "Critical Dependency",
-    entity: "Processing Facility D",
-    description:
-      "Single-region concentration detected in an upstream processing dependency.",
-    time: "2 hours ago",
-    score: 91,
-  },
-  {
-    id: 2,
-    type: "high",
-    title: "High Risk Supplier",
-    entity: "Supplier B",
-    description:
-      "Material dependency identified with limited alternative suppliers.",
-    time: "5 hours ago",
-    score: 78,
-  },
-  {
-    id: 3,
-    type: "verification",
-    title: "Verification Required",
-    entity: "Lithium → Processing Facility D",
-    description:
-      "Relationship evidence should be re-verified before the next investigation cycle.",
-    time: "Yesterday",
-  },
-  {
-    id: 4,
-    type: "resolved",
-    title: "Risk Signal Resolved",
-    entity: "Factory X",
-    description:
-      "Previously detected geographic concentration has been resolved.",
-    time: "Yesterday",
-  },
-];
-
-const iconMap = {
-  critical: ShieldAlert,
-  high: AlertTriangle,
-  verification: ShieldCheck,
-  resolved: CheckCircle2,
-};
+type AlertVisualType = "critical" | "high" | "verification" | "resolved";
+type AlertItem = Alert & { type: AlertVisualType; entity: string };
+const iconMap = { critical: ShieldAlert, high: AlertTriangle, verification: ShieldCheck, resolved: CheckCircle2 };
 
 function Alerts() {
-  const activeAlerts = alerts.filter(
-    (alert) => alert.type !== "resolved"
-  ).length;
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  return (
-    <div className="alerts-page">
-      <section className="alerts-header">
-        <div>
-          <span className="alerts-eyebrow">MONITORING CENTER</span>
+  useEffect(() => {
+    const controller = new AbortController();
+    listAlerts(false, controller.signal)
+      .then(({ items }) => setAlerts(items.map((alert) => ({ ...alert, type: visualType(alert), entity: alert.entity_name || "Workspace alert" }))))
+      .catch((cause) => { if (!controller.signal.aborted) { console.error(cause); setError(true); } })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, []);
 
-          <h1>Alerts</h1>
+  const activeAlerts = alerts.filter((alert) => !alert.read_at).length;
+  const criticalCount = alerts.filter((alert) => alert.type === "critical").length;
+  const highCount = alerts.filter((alert) => alert.type === "high").length;
+  const verificationCount = alerts.filter((alert) => alert.type === "verification").length;
 
-          <p>
-            Monitor dependency changes, verification issues,
-            and emerging supply-chain risk signals.
-          </p>
-        </div>
+  const handleRead = async (alert: AlertItem) => {
+    if (alert.read_at || busyId) return;
+    setBusyId(alert.id);
+    try {
+      const updated = await markAlertRead(alert.id);
+      setAlerts((current) => current.map((item) => item.id === alert.id ? { ...item, ...updated } : item));
+    } catch (cause) { console.error("Unable to mark alert as read", cause); }
+    finally { setBusyId(null); }
+  };
 
-        <div className="alerts-counter">
-          <Bell size={18} />
-          <span>{activeAlerts} Active</span>
-        </div>
-      </section>
+  const handleDismiss = async (alert: AlertItem) => {
+    setBusyId(alert.id);
+    try {
+      await dismissAlert(alert.id);
+      setAlerts((current) => current.filter((item) => item.id !== alert.id));
+    } catch (cause) { console.error("Unable to dismiss alert", cause); }
+    finally { setBusyId(null); }
+  };
 
-      <section className="alerts-summary">
-        <div className="alert-summary-card">
-          <div className="alert-summary-icon critical">
-            <ShieldAlert size={20} />
-          </div>
+  return <div className="alerts-page">
+    <section className="alerts-header"><div><span className="alerts-eyebrow">MONITORING CENTER</span><h1>Alerts</h1><p>Review alert records created by backend processes.</p></div><div className="alerts-counter"><Bell size={18} /><span>{activeAlerts} Unread</span></div></section>
+    <section className="alerts-summary"><AlertSummary icon={<ShieldAlert size={20} />} value={criticalCount} label="Critical" kind="critical" /><AlertSummary icon={<AlertTriangle size={20} />} value={highCount} label="High Risk" kind="high" /><AlertSummary icon={<ShieldCheck size={20} />} value={verificationCount} label="Needs Verification" kind="verification" /><AlertSummary icon={<CheckCircle2 size={20} />} value={alerts.filter((alert) => !!alert.read_at).length} label="Read" kind="resolved" /></section>
+    <section className="alerts-container"><div className="alerts-section-heading"><div><span>DEPENDENCY ALERTS</span><h2>Recent Activity</h2></div><span className="alerts-filter">All Alerts</span></div>
+      {loading ? <LoadingState label="Loading alerts..." /> : error ? <ErrorState title="Alerts are unavailable" description="Check the backend and PostgreSQL connection." action={() => window.location.reload()} /> : <div className="alerts-list">
+        {alerts.map((alert) => { const Icon = iconMap[alert.type]; return <article className={`alert-card ${alert.type}`} key={alert.id}><div className="alert-card-icon"><Icon size={21} /></div><div className="alert-card-content"><div className="alert-title-row"><div><span className="alert-type">{alert.severity} · {alert.title}</span><h3>{alert.entity}</h3></div></div><p>{alert.message}</p><div className="alert-footer"><span className="alert-time"><Clock3 size={14} />{new Date(alert.created_at).toLocaleString()}</span><div><button className="alert-action" onClick={() => void handleRead(alert)} disabled={!!alert.read_at || busyId === alert.id}>{alert.read_at ? "Read" : busyId === alert.id ? "Saving..." : "Mark read"}<ArrowRight size={15} /></button><button className="alert-action" onClick={() => void handleDismiss(alert)} disabled={busyId === alert.id}>Dismiss</button></div></div></div></article>; })}
+        {!alerts.length && <p className="empty-event">No alerts have been recorded yet.</p>}
+      </div>}
+    </section>
+  </div>;
+}
 
-          <div>
-            <strong>1</strong>
-            <span>Critical</span>
-          </div>
-        </div>
+function visualType(alert: Alert): AlertVisualType {
+  const severity = alert.severity.toLowerCase();
+  if (severity === "critical") return "critical";
+  if (severity === "high") return "high";
+  if (/verif/i.test(`${alert.title} ${alert.message}`)) return "verification";
+  return alert.read_at ? "resolved" : "high";
+}
 
-        <div className="alert-summary-card">
-          <div className="alert-summary-icon high">
-            <AlertTriangle size={20} />
-          </div>
-
-          <div>
-            <strong>1</strong>
-            <span>High Risk</span>
-          </div>
-        </div>
-
-        <div className="alert-summary-card">
-          <div className="alert-summary-icon verification">
-            <ShieldCheck size={20} />
-          </div>
-
-          <div>
-            <strong>1</strong>
-            <span>Needs Verification</span>
-          </div>
-        </div>
-
-        <div className="alert-summary-card">
-          <div className="alert-summary-icon resolved">
-            <CheckCircle2 size={20} />
-          </div>
-
-          <div>
-            <strong>1</strong>
-            <span>Resolved</span>
-          </div>
-        </div>
-      </section>
-
-      <section className="alerts-container">
-        <div className="alerts-section-heading">
-          <div>
-            <span>DEPENDENCY ALERTS</span>
-            <h2>Recent Activity</h2>
-          </div>
-
-          <button className="alerts-filter">
-            All Alerts
-          </button>
-        </div>
-
-        <div className="alerts-list">
-          {alerts.map((alert) => {
-            const Icon = iconMap[alert.type];
-
-            return (
-              <article
-                className={`alert-card ${alert.type}`}
-                key={alert.id}
-              >
-                <div className="alert-card-icon">
-                  <Icon size={21} />
-                </div>
-
-                <div className="alert-card-content">
-                  <div className="alert-title-row">
-                    <div>
-                      <span className="alert-type">
-                        {alert.title}
-                      </span>
-
-                      <h3>{alert.entity}</h3>
-                    </div>
-
-                    {alert.score !== undefined && (
-                      <div className="alert-score">
-                        <strong>{alert.score}</strong>
-                        <span>/100</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <p>{alert.description}</p>
-
-                  <div className="alert-footer">
-                    <span className="alert-time">
-                      <Clock3 size={14} />
-                      {alert.time}
-                    </span>
-
-                    <button className="alert-action">
-                      {alert.type === "verification"
-                        ? "Review"
-                        : alert.type === "resolved"
-                        ? "View Details"
-                        : "View Risk"}
-
-                      <ArrowRight size={15} />
-                    </button>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-    </div>
-  );
+function AlertSummary({ icon, value, label, kind }: { icon: React.ReactNode; value: number; label: string; kind: AlertVisualType }) {
+  return <div className="alert-summary-card"><div className={`alert-summary-icon ${kind}`}>{icon}</div><div><strong>{value}</strong><span>{label}</span></div></div>;
 }
 
 export default Alerts;
