@@ -1,46 +1,46 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class InvestigationCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=255)
-    target: str | None = Field(default=None, max_length=500)
-    description: str | None = None
-    priority: str = Field(default="medium", pattern="^(low|medium|high|critical)$")
-
-
-class InvestigationUpdate(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=255)
-    target: str | None = Field(default=None, max_length=500)
-    description: str | None = None
-    priority: str | None = Field(default=None, pattern="^(low|medium|high|critical)$")
-    status: str | None = Field(default=None, pattern="^(draft|running|paused|completed|failed|archived)$")
+    name: str | None = Field(default=None, max_length=240)
+    goal: str = Field(min_length=20, max_length=10000)
+    depth: Literal["standard", "deep", "maximum"] = "deep"
+    scope_geography: bool = True
+    scope_materials: bool = True
+    scope_manufacturers: bool = True
+    scope_verification: bool = True
 
 
 class InvestigationRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
+
     id: UUID
-    organization_id: UUID | None
-    created_by: UUID | None
     name: str
-    target: str | None
-    description: str | None
+    goal: str
     status: str
-    priority: str
+    progress: float
+    scope: dict[str, bool]
+    depth: str
+    error_message: str | None
     created_at: datetime
     updated_at: datetime
 
 
-class InvestigationStepRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: UUID
-    sequence: int
-    stage: str
-    status: str
-    input_data: dict
-    output_data: dict
-    error_message: str | None
-    started_at: datetime | None
-    completed_at: datetime | None
-    created_at: datetime
+class InvestigationList(BaseModel):
+    items: list[InvestigationRead]
+    total: int
+
+
+class InvestigationCreated(BaseModel):
+    investigation: InvestigationRead
+
+
+class InvestigationDetail(InvestigationRead):
+    entities_count: int = 0
+    relationships_count: int = 0
+    risk_count: int = 0
+    timeline: list[dict[str, str | datetime]] = Field(default_factory=list)

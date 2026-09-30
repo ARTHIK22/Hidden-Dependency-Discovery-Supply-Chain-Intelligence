@@ -1,10 +1,27 @@
-import { apiClient } from "../../services/api/client";
-import type { Investigation, InvestigationCreate, InvestigationStep, InvestigationUpdate } from "../../types/investigation.types";
-export const listInvestigations = (params: { status?: string; limit?: number; offset?: number } = {}) => apiClient.get<Investigation[]>("/investigations", params);
-export const createInvestigation = (payload: InvestigationCreate) => apiClient.post<Investigation>("/investigations", payload);
-export const getInvestigation = (id: string) => apiClient.get<Investigation>(`/investigations/${encodeURIComponent(id)}`);
-export const updateInvestigation = (id: string, payload: InvestigationUpdate) => apiClient.patch<Investigation>(`/investigations/${encodeURIComponent(id)}`, payload);
-export const startInvestigation = (id: string) => apiClient.post<Investigation>(`/investigations/${encodeURIComponent(id)}/start`);
-export const pauseInvestigation = (id: string) => apiClient.post<Investigation>(`/investigations/${encodeURIComponent(id)}/pause`);
-export const archiveInvestigation = (id: string) => apiClient.delete<void>(`/investigations/${encodeURIComponent(id)}`);
-export const getInvestigationSteps = (id: string) => apiClient.get<InvestigationStep[]>(`/investigations/${encodeURIComponent(id)}/steps`);
+import { get, post, queryString } from "../../services/api/client";
+import type {
+  ApiList,
+  Investigation,
+  InvestigationCreate,
+  InvestigationDetail,
+} from "../../types/api.types";
+
+export type InvestigationListParams = {
+  q?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export const listInvestigations = (params?: string | InvestigationListParams, signal?: AbortSignal) => {
+  const filters = typeof params === "string" ? { q: params } : params;
+  return get<ApiList<Investigation>>(
+    `/investigations${queryString({ limit: 100, ...filters })}`,
+    signal,
+  );
+};
+
+export const createInvestigation = (input: InvestigationCreate) =>
+  post<{ investigation: Investigation }>("/investigations", input);
+
+export const getInvestigation = (id: string, signal?: AbortSignal) =>
+  get<InvestigationDetail>(`/investigations/${encodeURIComponent(id)}`, signal);

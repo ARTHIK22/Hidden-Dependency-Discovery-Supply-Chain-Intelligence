@@ -1,4 +1,12 @@
-import { apiClient } from "../../services/api/client";
+import { ApiError } from "../../services/api/client";
 import type { Source, SourceCreate } from "../../types/source.types";
-export const listSources = (params: { limit?: number; offset?: number } = {}) => apiClient.get<Source[]>("/sources", params);
-export const createSource = (payload: SourceCreate) => apiClient.post<Source>("/sources", payload);
+
+function sourcesUnavailable<T>(): Promise<T> {
+  return Promise.reject(
+    new ApiError("Source catalog endpoints are not available in the current backend.", 501, null),
+  );
+}
+
+export const listSources = (_params: { limit?: number; offset?: number } = {}): Promise<Source[]> =>
+  sourcesUnavailable();
+export const createSource = (_payload: SourceCreate): Promise<Source> => sourcesUnavailable();

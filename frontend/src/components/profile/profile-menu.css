@@ -1,0 +1,229 @@
+.profile-wrapper {
+  position: relative;
+}
+
+.profile-trigger {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 9px 4px 5px;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  background: transparent;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.profile-trigger:hover,
+.profile-trigger.active {
+  border-color: var(--glass-border);
+  background: rgba(255, 253, 247, 0.55);
+  backdrop-filter: blur(16px);
+}
+
+.profile-avatar,
+.profile-large-avatar {
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--clay), var(--clay-light));
+  color: white;
+  font-weight: 700;
+}
+
+.profile-avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.profile-info strong {
+  color: var(--text-primary);
+  font-size: 11px;
+}
+
+.profile-info span {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.profile-chevron {
+  color: var(--text-muted);
+  transition: var(--transition-fast);
+}
+
+.profile-chevron.rotate {
+  transform: rotate(180deg);
+}
+
+.profile-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 5000;
+  width: 290px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: 22px;
+  background: rgba(255, 253, 247, 0.95);
+  box-shadow: 0 24px 70px rgba(74, 58, 44, 0.18);
+  backdrop-filter: blur(28px);
+  animation: profileMenuIn 0.18s ease;
+}
+
+.profile-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 17px;
+}
+
+.profile-large-avatar {
+  width: 43px;
+  height: 43px;
+  font-size: 15px;
+}
+
+.profile-menu-header > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile-menu-header strong {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.profile-menu-header span {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.workspace-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 10px 9px;
+  padding: 10px;
+  border: 1px solid rgba(100, 80, 60, 0.08);
+  border-radius: 14px;
+  background: rgba(231, 215, 157, 0.16);
+}
+
+.workspace-icon {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--butter-light);
+  color: var(--clay-dark);
+}
+
+.workspace-card > div:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.workspace-card span {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.workspace-card strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-card > svg {
+  color: var(--success);
+}
+
+.profile-menu-section {
+  padding: 5px 8px;
+  border-top: 1px solid rgba(100, 80, 60, 0.07);
+}
+
+.profile-menu-section button,
+.signout-button {
+  width: 100%;
+  height: 39px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+  font-size: 11px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.profile-menu-section button:hover {
+  background: rgba(231, 215, 157, 0.22);
+  color: var(--clay-dark);
+}
+
+.profile-menu-section svg {
+  color: var(--clay);
+}
+
+.profile-menu-footer {
+  padding: 7px 8px;
+  border-top: 1px solid rgba(100, 80, 60, 0.07);
+}
+
+.signout-button {
+  color: var(--danger);
+}
+
+.signout-button:hover {
+  background: rgba(181, 111, 104, 0.08);
+}
+
+@keyframes profileMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 600px) {
+  .profile-info,
+  .profile-chevron {
+    display: none;
+  }
+
+  .profile-trigger {
+    padding: 3px;
+  }
+
+  .profile-menu {
+    position: fixed;
+    top: 70px;
+    right: 10px;
+  }
+}

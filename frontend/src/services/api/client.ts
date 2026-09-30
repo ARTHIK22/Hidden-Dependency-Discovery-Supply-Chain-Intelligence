@@ -1,63 +1,169 @@
-import { API_BASE_URL } from "../../config/api.config";
-import { ApiError } from "./errors";
-import { authHeaders, onUnauthorized } from "./interceptors";
+import { API_BASE_URL } from "../../config/env";
 
-type RequestOptions = Omit<RequestInit, "body"> & { body?: unknown; timeoutMs?: number };
+export class ApiError extends Error {
+  readonly status: number;
+  readonly payload: unknown;
+  readonly details: unknown;
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { timeoutMs = 15000, body, headers, ...init } = options;
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
-  const requestHeaders = authHeaders(headers);
-  let requestBody: BodyInit | undefined;
-  if (body !== undefined && body !== null) {
-    if (body instanceof FormData || body instanceof Blob || typeof body === "string") requestBody = body;
-    else {
-      requestHeaders.set("Content-Type", "application/json");
-      requestBody = JSON.stringify(body);
-    }
-  }
-
-  try {
-    const response = await fetch(`${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`, {
-      ...init, body: requestBody, headers: requestHeaders, signal: controller.signal,
-    });
-    if (response.status === 401) onUnauthorized(path);
-    if (!response.ok) {
-      let message = response.statusText || "Request failed";
-      let details: unknown;
-      try {
-        const payload = await response.json();
-        details = payload.detail ?? payload;
-        message = typeof details === "string" ? details : Array.isArray(details)
-          ? details.map((issue) => issue.msg ?? JSON.stringify(issue)).join("; ")
-          : payload.message ?? message;
-      } catch { /* Keep the HTTP status message for non-JSON errors. */ }
-      throw new ApiError(response.status, message, details);
-    }
-    if (response.status === 204) return undefined as T;
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) return await response.json() as T;
-    return await response.blob() as T;
-  } catch (error) {
-    if (error instanceof ApiError) throw error;
-    if (error instanceof DOMException && error.name === "AbortError") throw new Error("The request timed out. Please try again.");
-    throw new Error("The backend is unavailable. Check your connection and try again.");
-  } finally {
-    window.clearTimeout(timer);
+  constructor(message: string, status: number, payload: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.payload = payload;
+    this.details = payload;
   }
 }
 
-function queryString(params: Record<string, string | number | boolean | null | undefined>): string {
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
-  const encoded = query.toString();
+export type ApiQueryValue = string | number | boolean | null | undefined;
+export type ApiParams = Readonly<Record<string, ApiQueryValue>>;
+export type ApiRequestOptions = {
+  params?: ApiParams;
+  signal?: AbortSignal;
+  headers?: HeadersInit;
+};
+
+export function apiUrl(path: string): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE_URL}${normalizedPath}`;
+}
+
+export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  headers.set("Accept", "application/json");
+
+  let response: Response;
+  try {
+    response = await fetch(apiUrl(path), { ...init, headers });
+  } catch (error) {
+    throw new ApiError(
+      error instanceof Error ? error.message : "The API could not be reached.",
+      0,
+      error,
+    );
+  }
+
+  if (response.status === 204) return undefined as T;
+
+  const contentType = response.headers.get("content-type") ?? "";
+  const payload: unknown = contentType.includes("application/json") || contentType.includes("+json")
+    ? await response.json().catch(() => null)
+    : await response.text().catch(() => "");
+
+  if (!response.ok) {
+    const detail =
+      typeof payload === "object" && payload !== null && "detail" in payload
+        ? (payload as { detail?: unknown }).detail
+        : undefined;
+    const message =
+      typeof detail === "string"
+        ? detail
+        : typeof payload === "string" && payload
+          ? payload
+          : `Request failed (${response.status}).`;
+    throw new ApiError(message, response.status, payload);
+  }
+
+  return payload as T;
+}
+
+export const get = <T>(path: string, signal?: AbortSignal) =>
+  request<T>(path, { method: "GET", signal });
+
+export const post = <T>(path: string, body?: unknown) =>
+  request<T>(path, {
+    method: "POST",
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+
+export const patch = <T>(path: string, body?: unknown) =>
+  request<T>(path, {
+    method: "PATCH",
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+
+export const remove = <T = void>(path: string) =>
+  request<T>(path, { method: "DELETE" });
+
+function withParams(path: string, params?: ApiParams): string {
+  if (!params) return path;
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") {
+      search.set(key, String(value));
+    }
+  }
+  const encoded = search.toString();
+  if (!encoded) return path;
+  return `${path}${path.includes("?") ? "&" : "?"}${encoded}`;
+}
+
+function isAbortSignal(value: unknown): value is AbortSignal {
+  return typeof value === "object" && value !== null &&
+    "aborted" in value && "addEventListener" in value;
+}
+
+function getOptions(
+  value?: ApiParams | ApiRequestOptions | AbortSignal,
+  config?: ApiRequestOptions,
+): ApiRequestOptions {
+  if (config) {
+    return {
+      ...config,
+      params: value && !isAbortSignal(value) && !("params" in value) && !("signal" in value) && !("headers" in value)
+        ? value as ApiParams
+        : config.params,
+    };
+  }
+  if (!value) return {};
+  if (isAbortSignal(value)) return { signal: value };
+  if ("params" in value || "signal" in value || "headers" in value) {
+    return value as ApiRequestOptions;
+  }
+  return { params: value as ApiParams };
+}
+
+function send<T>(method: string, path: string, body?: unknown, options: ApiRequestOptions = {}) {
+  return request<T>(withParams(path, options.params), {
+    method,
+    signal: options.signal,
+    headers: options.headers,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+}
+
+// Feature APIs use this shared fetch client so URL, query, JSON and error handling
+// stay consistent across the application.
+export const apiClient = {
+  get<T>(path: string, paramsOrOptions?: ApiParams | ApiRequestOptions | AbortSignal, config?: ApiRequestOptions) {
+    return send<T>("GET", path, undefined, getOptions(paramsOrOptions, config));
+  },
+  post<T>(path: string, body?: unknown, options?: ApiRequestOptions) {
+    return send<T>("POST", path, body, options);
+  },
+  put<T>(path: string, body?: unknown, options?: ApiRequestOptions) {
+    return send<T>("PUT", path, body, options);
+  },
+  patch<T>(path: string, body?: unknown, options?: ApiRequestOptions) {
+    return send<T>("PATCH", path, body, options);
+  },
+  delete<T = void>(path: string, options?: ApiRequestOptions) {
+    return send<T>("DELETE", path, undefined, options);
+  },
+};
+
+export function queryString(values: Record<string, string | number | boolean | undefined>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  }
+  const encoded = params.toString();
   return encoded ? `?${encoded}` : "";
 }
 
-export const apiClient = {
-  get: <T>(path: string, params?: Record<string, string | number | boolean | null | undefined>) => request<T>(`${path}${params ? queryString(params) : ""}`, { method: "GET" }),
-  post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body }),
-  patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body }),
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
-};
+// Retained for existing callers that need to inspect a raw Response.
+export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  return fetch(apiUrl(path), init);
+}

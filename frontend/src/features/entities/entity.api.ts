@@ -1,8 +1,35 @@
-import { apiClient } from "../../services/api/client";
-import type { Entity, EntityAlias, EntityCreate, EntityUpdate } from "../../types/entity.types";
-export const listEntities = (params: { q?: string; limit?: number; offset?: number } = {}) => apiClient.get<Entity[]>("/entities", params);
-export const createEntity = (payload: EntityCreate) => apiClient.post<Entity>("/entities", payload);
-export const getEntity = (id: string) => apiClient.get<Entity>(`/entities/${encodeURIComponent(id)}`);
-export const updateEntity = (id: string, payload: EntityUpdate) => apiClient.patch<Entity>(`/entities/${encodeURIComponent(id)}`, payload);
-export const listAliases = (id: string) => apiClient.get<EntityAlias[]>(`/entities/${encodeURIComponent(id)}/aliases`);
-export const addAlias = (id: string, alias: string, alias_type = "name") => apiClient.post<EntityAlias>(`/entities/${encodeURIComponent(id)}/aliases`, { alias, alias_type });
+import { get, post, queryString, remove } from "../../services/api/client";
+import type { ApiList, Entity, EntityDetail, WatchlistEntry } from "../../types/api.types";
+
+export type EntityListParams = {
+  q?: string;
+  entity_type?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export const listEntities = (params?: string | EntityListParams, signal?: AbortSignal) => {
+  const filters = typeof params === "string" ? { q: params } : params;
+  return get<ApiList<Entity>>(
+    `/entities${queryString({ limit: 250, ...filters })}`,
+    signal,
+  );
+};
+
+export const getEntity = (id: string, signal?: AbortSignal) =>
+  get<EntityDetail>(`/entities/${encodeURIComponent(id)}`, signal);
+
+export const searchWorkspace = (q: string, signal?: AbortSignal) =>
+  get<{ items: Array<{ id: string; type: "entity" | "investigation"; label: string; path: string }> }>(
+    `/search${queryString({ q, limit: 12 })}`,
+    signal,
+  );
+
+export const listWatchlist = (q?: string, signal?: AbortSignal) =>
+  get<ApiList<WatchlistEntry>>(`/watchlist${queryString({ q })}`, signal);
+
+export const addToWatchlist = (entity_id: string) =>
+  post<WatchlistEntry>("/watchlist", { entity_id });
+
+export const removeFromWatchlist = (entityId: string) =>
+  remove(`/watchlist/${encodeURIComponent(entityId)}`);

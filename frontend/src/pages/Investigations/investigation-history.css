@@ -1,0 +1,150 @@
+.history-page {
+  padding: 28px;
+  max-width: 1300px;
+  margin: auto;
+}
+
+.history-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.history-heading h1 {
+  margin: 5px 0;
+}
+
+.history-heading p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.history-new {
+  border: 0;
+  background: var(--clay);
+  color: white;
+  padding: 11px 14px;
+  border-radius: 13px;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.history-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 18px;
+  padding: 10px 13px;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+}
+
+.history-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
+
+.glass-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.history-list {
+  display: grid;
+  gap: 9px;
+}
+
+.history-row {
+  width: 100%;
+  border-radius: 20px;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: 42px 1fr auto auto;
+  align-items: center;
+  text-align: left;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.history-row:hover {
+  background: var(--glass-strong);
+  transform: translateY(-1px);
+}
+
+.history-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: var(--butter-light);
+  display: grid;
+  place-items: center;
+  color: var(--clay-dark);
+}
+
+.history-id {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+}
+
+.history-row h3 {
+  font-size: 14px;
+  margin: 4px 0;
+}
+
+.history-row p {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.history-status {
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 999px;
+  padding: 6px 9px;
+}
+
+.history-status.done {
+  color: var(--success);
+  background: rgba(117, 141, 104, 0.12);
+}
+
+.history-status.review {
+  color: var(--warning);
+  background: rgba(195, 155, 85, 0.13);
+}
+
+@media (max-width: 650px) {
+  .history-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .history-row {
+    grid-template-columns: 40px 1fr;
+  }
+
+  .history-row .history-status,
+  .history-row > svg {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

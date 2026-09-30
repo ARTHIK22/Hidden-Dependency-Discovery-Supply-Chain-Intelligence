@@ -1,36 +1,47 @@
-import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, FileSearch, Search, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowRight, ExternalLink, FileText, Search, ShieldCheck, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { listEvidence } from "../../features/evidence/evidence.api";
-import { listSources } from "../../features/sources/source.api";
-import { listEntities } from "../../features/entities/entity.api";
-import { listRelationships } from "../../features/relationships/relationship.api";
-import type { Evidence } from "../../types/evidence.types";
-import type { Source } from "../../types/source.types";
-import type { Entity } from "../../types/entity.types";
-import type { Relationship } from "../../types/relationship.types";
-import { userMessage } from "../../services/api/errors";
+import { ErrorState, LoadingState } from "../../components/states/AsyncStates";
+import type { Evidence as EvidenceRecord } from "../../types/api.types";
 import "./evidence.css";
 
+type EvidenceItem = EvidenceRecord & { relationship: string; from: string; to: string; status: "Verified" | "Needs review" };
+
 export default function Evidence() {
-  const [evidence, setEvidence] = useState<Evidence[]>([]);
-  const [sources, setSources] = useState<Source[]>([]);
-  const [entities, setEntities] = useState<Entity[]>([]);
-  const [relationships, setRelationships] = useState<Relationship[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const [search, setSearch] = useState("");
-  const [error, setError] = useState("");
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const [items, setItems] = useState<EvidenceItem[]>([]);
+  const [selected, setSelected] = useState<EvidenceItem | null>(null);
   const [loading, setLoading] = useState(true);
-  async function load() { setLoading(true); setError(""); try { const [e, s, n, r] = await Promise.all([listEvidence({ limit: 500 }), listSources({ limit: 500 }), listEntities({ limit: 500 }), listRelationships({ limit: 500 })]); setEvidence(e); setSources(s); setEntities(n); setRelationships(r); if (e[0]) setSelectedId(e[0].id); } catch (reason) { setError(userMessage(reason)); } finally { setLoading(false); } }
-  useEffect(() => { void load(); }, []);
-  const sourceMap = useMemo(() => new Map(sources.map((source) => [source.id, source])), [sources]);
-  const entityMap = useMemo(() => new Map(entities.map((entity) => [entity.id, entity.name])), [entities]);
-  const relationMap = useMemo(() => new Map(relationships.map((relation) => [relation.id, relation])), [relationships]);
-  const filtered = evidence.filter((item) => [item.title, item.content, item.evidence_type].some((value) => value.toLowerCase().includes(search.toLowerCase())));
-  const selected = evidence.find((item) => item.id === selectedId) || filtered[0];
-  const selectedRelation = selected?.relationship_id ? relationMap.get(selected.relationship_id) : undefined;
-  return <main className="evidence-page"><header className="evidence-header"><div><div className="evidence-eyebrow"><ShieldCheck size={14} />STORED EVIDENCE</div><h1>Evidence Explorer</h1><p>Evidence is shown from investigations you are allowed to access.</p></div><label className="evidence-search"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search evidence…" /></label></header>
-    {error && <p role="alert">{error} <button type="button" onClick={() => void load()}>Retry</button></p>}<div className="evidence-layout"><section className="relationship-panel glass-panel"><div className="panel-heading"><div><span className="panel-kicker">EVIDENCE RECORDS</span><h2>Results</h2></div><span className="count-pill">{filtered.length}</span></div>{loading ? <p aria-live="polite">Loading evidence…</p> : filtered.length === 0 ? <p>No matching evidence records.</p> : <div className="relationship-cards">{filtered.map((item) => <button key={item.id} className={`relationship-card ${item.id === selected?.id ? "selected" : ""}`} onClick={() => setSelectedId(item.id)}><strong>{item.title}</strong><p>{item.evidence_type} · {Math.round(item.confidence_score * 100)}% confidence</p><small>{new Date(item.collected_at).toLocaleString()}</small></button>)}</div>}</section>
-      {selected && <section className="evidence-detail glass-panel"><span className="panel-kicker">EVIDENCE DETAIL</span><h2>{selected.title}</h2><p>{selected.content}</p><dl><dt>Type</dt><dd>{selected.evidence_type}</dd><dt>Confidence</dt><dd>{Math.round(selected.confidence_score * 100)}%</dd><dt>Verification</dt><dd>{selected.verification_status}</dd><dt>Collected</dt><dd>{new Date(selected.collected_at).toLocaleString()}</dd><dt>Published</dt><dd>{selected.published_at ? new Date(selected.published_at).toLocaleDateString() : "Not provided"}</dd><dt>Source</dt><dd>{selected.source_id ? sourceMap.get(selected.source_id)?.name || selected.source_id : "Not linked"}</dd><dt>Entity</dt><dd>{selected.entity_id ? entityMap.get(selected.entity_id) || selected.entity_id : "Not linked"}</dd><dt>Relationship</dt><dd>{selectedRelation ? `${selectedRelation.relationship_type} · ${entityMap.get(selectedRelation.source_entity_id) || "Entity"} → ${entityMap.get(selectedRelation.target_entity_id) || "Entity"}` : "Not linked"}</dd></dl>{selected.url && <a href={selected.url} target="_blank" rel="noreferrer">Open source reference <ExternalLink size={14} /></a>}{selected.content_hash && <small>SHA-256: {selected.content_hash}</small>}</section>}
-      {!selected && !error && <p><FileSearch /> No evidence is stored yet.</p>}
-    </div></main>;
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    listEvidence(query || undefined, controller.signal)
+      .then(({ items: rows }) => {
+        setItems(rows.map((row) => ({
+          ...row,
+          relationship: row.relationship_type || "Unlinked evidence",
+          from: row.source_entity_name || "Unknown entity",
+          to: row.target_entity_name || "Unknown entity",
+          status: row.verification_status.toLowerCase() === "verified" ? "Verified" : "Needs review",
+        })));
+        setError(false);
+      })
+      .catch((cause) => { if (!controller.signal.aborted) { console.error(cause); setError(true); } })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [query]);
+
+  return <div className="evidence-page">
+    <div className="page-heading-row"><div><span className="eyebrow">PROVENANCE</span><h1>Evidence</h1><p>Review provenance records and their verification status from the backend.</p></div><div className="evidence-summary"><strong>{items.length}</strong><span>evidence records</span></div></div>
+    <div className="evidence-toolbar glass-card"><div className="search-field"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search entities, relationships or sources..." /></div><button className="glass-button" onClick={() => navigate("/graph")}>Open graph<ArrowRight size={16} /></button></div>
+    {loading ? <LoadingState label="Loading evidence..." /> : error ? <ErrorState title="Evidence is unavailable" description="Check the backend and PostgreSQL connection." action={() => window.location.reload()} /> : <div className="evidence-list">
+      {items.map((item) => <button key={item.id} className="evidence-row glass-card" onClick={() => setSelected(item)}><div className="evidence-icon"><FileText size={19} /></div><div className="evidence-main"><div className="evidence-relationship"><strong>{item.from}</strong><ArrowRight size={14} /><strong>{item.to}</strong><span className="relationship-pill">{item.relationship}</span></div><p>{item.excerpt}</p><span className="evidence-source">{item.source} · {item.source_type}</span></div><div className="evidence-confidence"><span>{item.confidence === null ? "—" : `${Math.round(item.confidence)}%`}</span><small>confidence</small></div><span className={`status-pill ${item.status === "Verified" ? "verified" : "review"}`}>{item.status}</span></button>)}
+      {!items.length && <div className="empty-state glass-card"><Search size={24} /><h3>{query ? "No evidence found" : "No evidence records yet"}</h3><p>{query ? "Try another entity, relationship or source." : "Evidence appears when provenance records are stored."}</p></div>}
+    </div>}
+    {selected && <div className="drawer-backdrop" onClick={() => setSelected(null)}><aside className="evidence-drawer glass-card" onClick={(event) => event.stopPropagation()}><div className="drawer-header"><div><span className="eyebrow">EVIDENCE RECORD</span><h2>{selected.relationship}</h2></div><button className="icon-button" onClick={() => setSelected(null)}><X size={18} /></button></div><div className="drawer-entities"><div><span>FROM</span><strong>{selected.from}</strong></div><ArrowRight size={17} /><div><span>TO</span><strong>{selected.to}</strong></div></div><div className="drawer-score"><ShieldCheck size={18} /><div><strong>{selected.confidence === null ? "Confidence not recorded" : `${Math.round(selected.confidence)}% confidence`}</strong><span>{selected.status}</span></div></div><div className="drawer-section"><span className="drawer-label">SOURCE</span><h3>{selected.source}</h3><p>{selected.source_type} · Published {selected.published_date ? new Date(selected.published_date).toLocaleDateString() : "date not recorded"} · Captured {new Date(selected.captured_at).toLocaleDateString()}</p><div className="source-preview"><FileText size={18} /><div><strong>Source excerpt</strong><span>{selected.excerpt}</span></div></div>{selected.source_url && <a className="glass-button full" href={selected.source_url} target="_blank" rel="noreferrer">Open source<ExternalLink size={15} /></a>}</div><div className="drawer-section"><span className="drawer-label">GRAPH RELATIONSHIP</span><button className="relationship-link" onClick={() => navigate("/graph")}>Explore relationship in graph<ArrowRight size={15} /></button></div></aside></div>}
+  </div>;
 }

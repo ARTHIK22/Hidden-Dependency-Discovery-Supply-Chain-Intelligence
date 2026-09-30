@@ -1,0 +1,59 @@
+.async-state {
+  min-height: 180px;
+
+  border-radius: 22px;
+
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  text-align: center;
+
+  padding: 25px;
+
+  color: var(--text-muted);
+}
+
+.async-state strong {
+  color: var(--text-primary);
+}
+
+.async-state span {
+  font-size: 12px;
+}
+
+.async-state button {
+  border: 0;
+
+  background: var(--clay);
+  color: white;
+
+  border-radius: 11px;
+
+  padding: 8px 12px;
+
+  display: flex;
+  gap: 6px;
+
+  align-items: center;
+
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.spin {
+  color: var(--clay);
+
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

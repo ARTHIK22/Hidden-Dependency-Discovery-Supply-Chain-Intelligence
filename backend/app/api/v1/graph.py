@@ -1,25 +1,76 @@
-from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query
+from collections import defaultdict
+
+from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user
 from app.core.database import get_db
-from app.models.entity import Entity
-from app.services.graph_service import neighborhood, shortest_path
+from app.models import Entity, Evidence, Relationship
 
-router = APIRouter(prefix="/graph", tags=["Graph"])
+router = APIRouter(prefix="/graph", tags=["graph"])
+
+_COLUMN_ORDER = {
+    "company": 0,
+    "supplier": 1,
+    "manufacturer": 2,
+    "material": 3,
+    "facility": 4,
+    "region": 5,
+}
 
 
-@router.get("/{entity_id}", summary="Get the graph neighborhood around an entity")
-def get_graph(entity_id: UUID, depth: int = Query(1, ge=1, le=5), db: Session = Depends(get_db), _: object = Depends(get_current_user)):
-    if db.get(Entity, entity_id) is None:
-        raise HTTPException(404, "Entity not found")
-    return neighborhood(db, entity_id, depth)
+@router.get("")
+def get_graph(db: Session = Depends(get_db)) -> dict[str, list[dict[str, object]]]:
+    entities = db.scalars(select(Entity).order_by(Entity.created_at, Entity.name)).all()
+    relationships = db.scalars(select(Relationship).order_by(Relationship.created_at)).all()
+    entity_ids = {entity.id for entity in entities}
+    evidence_rows = db.scalars(select(Evidence).order_by(Evidence.captured_at.desc())).all()
+    evidence_by_relationship: dict[object, Evidence] = {}
+    for evidence in evidence_rows:
+        if evidence.relationship_id is not None:
+            evidence_by_relationship.setdefault(evidence.relationship_id, evidence)
 
+    row_by_type: dict[str, int] = defaultdict(int)
+    nodes: list[dict[str, object]] = []
+    for entity in entities:
+        node_type = entity.entity_type.lower()
+        column = _COLUMN_ORDER.get(node_type, 2)
+        row = row_by_type[node_type]
+        row_by_type[node_type] += 1
+        nodes.append(
+            {
+                "id": str(entity.id),
+                "type": "entity",
+                "position": {"x": 80 + column * 230, "y": 120 + row * 150},
+                "data": {
+                    "label": entity.name,
+                    "type": node_type,
+                    "risk": entity.risk_score or 0,
+                    "status": entity.risk_level or "Unassessed",
+                    "entityId": str(entity.id),
+                },
+            }
+        )
 
-@router.get("/path/{source_id}/{target_id}", summary="Find a shortest undirected relationship path")
-def get_path(source_id: UUID, target_id: UUID, db: Session = Depends(get_db), _: object = Depends(get_current_user)):
-    path = shortest_path(db, source_id, target_id)
-    if path is None:
-        raise HTTPException(404, "No relationship path found")
-    return {"path": path, "hops": len(path) - 1}
+    edges: list[dict[str, object]] = []
+    for relation in relationships:
+        if relation.source_entity_id not in entity_ids or relation.target_entity_id not in entity_ids:
+            continue
+        evidence = evidence_by_relationship.get(relation.id)
+        edges.append(
+            {
+                "id": str(relation.id),
+                "source": str(relation.source_entity_id),
+                "target": str(relation.target_entity_id),
+                "label": relation.relationship_type,
+                "data": {
+                    "relationshipId": str(relation.id),
+                    "relationshipType": relation.relationship_type,
+                    "confidence": relation.confidence,
+                    "source": evidence.source if evidence else relation.source,
+                    "evidence": evidence.excerpt if evidence else relation.evidence_summary,
+                    "verificationStatus": evidence.verification_status if evidence else relation.verification_status,
+                },
+            }
+        )
+    return {"nodes": nodes, "edges": edges}

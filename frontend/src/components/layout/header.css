@@ -7,129 +7,14 @@
   flex-shrink: 0;
 }
 
-.header-search {
-  width: min(480px, 45vw);
-  height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 12px 0 15px;
-  border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  color: var(--text-muted);
-}
-
-.header-search input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--text-primary);
-  font-size: 12px;
-}
-
-.header-search input::placeholder {
-  color: var(--text-muted);
-}
-
-.search-shortcut {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 4px 7px;
-  border-radius: 7px;
-  background: rgba(113, 106, 96, 0.08);
-  color: var(--text-muted);
-  font-size: 10px;
-}
-
 .header-actions {
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
-.header-icon-button {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.42);
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  cursor: pointer;
-  transition:
-    transform var(--transition-fast),
-    background var(--transition-fast);
-}
-
-.header-icon-button:hover {
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.7);
-}
-
-.notification-dot {
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  top: 8px;
-  right: 8px;
-  border-radius: 50%;
-  background: var(--clay);
-}
-
-.profile-button {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 5px 10px 5px 5px;
-  border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.42);
-  border: 1px solid rgba(255, 255, 255, 0.65);
-}
-
-.profile-avatar {
-  width: 31px;
-  height: 31px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: white;
-  background: var(--clay);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.profile-info strong {
-  display: block;
-  font-size: 11px;
-}
-
-.profile-info span {
-  display: block;
-  margin-top: 1px;
-  font-size: 9px;
-  color: var(--text-muted);
-}
-
 @media (max-width: 650px) {
   .app-header {
     padding: 0 15px;
-  }
-
-  .header-search {
-    width: 44px;
-  }
-
-  .header-search input,
-  .search-shortcut,
-  .profile-info {
-    display: none;
   }
 }

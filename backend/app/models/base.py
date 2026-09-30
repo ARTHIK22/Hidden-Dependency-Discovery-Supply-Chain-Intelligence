@@ -1,5 +1,5 @@
-"""Compatibility import for the single declarative base."""
+from sqlalchemy.orm import DeclarativeBase
 
-from app.core.database import Base
 
-__all__ = ["Base"]
+class Base(DeclarativeBase):
+    pass

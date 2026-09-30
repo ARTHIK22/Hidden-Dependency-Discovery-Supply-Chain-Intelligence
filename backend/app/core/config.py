@@ -1,87 +1,64 @@
 from functools import lru_cache
-import secrets
-from urllib.parse import urlparse
+import json
+from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+
+
 class Settings(BaseSettings):
+    app_name: str = "Hidden Dependency Intelligence"
+    app_version: str = "0.1.0"
+    app_env: str = "development"
+    debug: bool = False
+    host: str = "127.0.0.1"
+    port: int = 8000
+    database_url: str | None = None
+    redis_url: str | None = None
+    jwt_secret_key: str = ""
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    log_level: str = "INFO"
 
-    APP_NAME: str = "Hidden Dependency Intelligence"
-    APP_VERSION: str = "0.1.0"
-    APP_ENV: str = "development"
-    DEBUG: bool = True
-
-    HOST: str = "127.0.0.1"
-    PORT: int = 8000
-
-    DATABASE_URL: str = ""
-
-    REDIS_URL: str = "redis://localhost:6379/0"
-
-    JWT_SECRET_KEY: str = Field(
-        default_factory=lambda: secrets.token_urlsafe(48)
-    )
-
-    JWT_ALGORITHM: str = "HS256"
-
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-
-    CORS_ORIGINS: str = (
-        "http://localhost:5173,"
-        "http://127.0.0.1:5173"
-    )
-
-    LOG_LEVEL: str = "INFO"
+    @field_validator("debug", mode="before")
+    @classmethod
+    def parse_debug(cls, value: object) -> object:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"1", "true", "yes", "on", "debug", "development"}:
+                return True
+            if normalized in {"0", "false", "no", "off", "release", "production"}:
+                return False
+        return value
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(BACKEND_ROOT / ".env"),
         env_file_encoding="utf-8",
-        case_sensitive=False,
         extra="ignore",
+        case_sensitive=False,
     )
 
     @property
-    def cors_origins_list(self) -> list[str]:
-        raw = self.CORS_ORIGINS.strip()
-
-        if not raw:
-            return [
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-            ]
-
+    def allowed_origins(self) -> list[str]:
+        value = self.cors_origins.strip()
+        if value.startswith("["):
+            try:
+                decoded = json.loads(value)
+                if isinstance(decoded, list):
+                    return [str(origin).strip().rstrip("/") for origin in decoded if str(origin).strip()]
+            except json.JSONDecodeError:
+                pass
         return [
-            origin.strip()
-            for origin in raw.split(",")
-            if origin.strip()
-        ]
-
-    @field_validator("CORS_ORIGINS")
-    @classmethod
-    def validate_cors_origins(cls, value: str) -> str:
-
-        origins = [
-            origin.strip()
+            origin.strip().rstrip("/")
             for origin in value.split(",")
             if origin.strip()
         ]
-
-        for origin in origins:
-            parsed = urlparse(origin)
-
-            if parsed.scheme not in {"http", "https"}:
-                raise ValueError(
-                    "CORS origins must use http or https"
-                )
-
-            if not parsed.netloc:
-                raise ValueError(
-                    f"Invalid CORS origin: {origin}"
-                )
-
-        return value
 
 
 @lru_cache

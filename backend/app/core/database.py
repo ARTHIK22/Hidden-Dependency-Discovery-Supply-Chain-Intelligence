@@ -1,46 +1,45 @@
-# backend/app/core/database.py
-
 from collections.abc import Generator
+from threading import Lock
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-from sqlalchemy.pool import StaticPool
+from fastapi import HTTPException
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 
-
-class Base(DeclarativeBase):
-    pass
-
-
-engine_options = {
-    "echo": settings.DEBUG,
-    "pool_pre_ping": True,
-    "pool_recycle": 1800,
-}
-if settings.DATABASE_URL.startswith("sqlite"):
-    engine_options["connect_args"] = {"check_same_thread": False}
-    if settings.DATABASE_URL.endswith("://"):
-        engine_options["poolclass"] = StaticPool
-else:
-    engine_options["connect_args"] = {"connect_timeout": 5}
-
-engine = create_engine(settings.DATABASE_URL, **engine_options)
+_engine: Engine | None = None
+_engine_lock = Lock()
 
 
-SessionLocal = sessionmaker(
-    bind=engine,
-    class_=Session,
-    autoflush=False,
-    autocommit=False,
-    expire_on_commit=False,
-)
+def get_engine() -> Engine:
+    global _engine
+    if _engine is not None:
+        return _engine
+    if not settings.database_url:
+        raise RuntimeError("DATABASE_URL is not configured")
+    with _engine_lock:
+        if _engine is None:
+            _engine = create_engine(settings.database_url, pool_pre_ping=True)
+    return _engine
 
 
 def get_db() -> Generator[Session, None, None]:
-    db = SessionLocal()
-
     try:
-        yield db
+        engine = get_engine()
+        session = Session(engine)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Database is unavailable. Check the backend database configuration and service.",
+        ) from exc
+    try:
+        yield session
+    except OperationalError as exc:
+        session.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Database is unavailable. Check the backend database configuration and service.",
+        ) from exc
     finally:
-        db.close()
+        session.close()

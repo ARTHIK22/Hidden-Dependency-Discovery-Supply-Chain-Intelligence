@@ -1,3 +1,5 @@
+@import "./styles/responsive-polish.css";
+
 :root {
   --bg-primary: #eee9df;
 
@@ -40,6 +42,10 @@
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body,
 #root {
@@ -49,6 +55,7 @@ body,
 
 body {
   margin: 0;
+  overflow-x: hidden;
 
   font-family:
     Inter,
@@ -72,6 +79,34 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(169, 120, 88, 0.28) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(169, 120, 88, 0.28);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(169, 120, 88, 0.45);
 }
 
 button {
