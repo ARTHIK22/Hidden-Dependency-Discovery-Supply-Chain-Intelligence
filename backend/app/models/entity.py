@@ -13,8 +13,8 @@ class Entity(Base):
     __tablename__ = "entities"
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
-    name: Mapped[str] = mapped_column(String(240), index=True)
-    entity_type: Mapped[str] = mapped_column(String(64), index=True)
+    name: Mapped[str] = mapped_column(String(500), index=True)
+    entity_type: Mapped[str] = mapped_column(String(100), index=True)
     investigation_id: Mapped[UUID | None] = mapped_column(Uuid(as_uuid=True), ForeignKey("investigations.id", ondelete="SET NULL"), nullable=True, index=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     jurisdiction: Mapped[str | None] = mapped_column(String(160), nullable=True)
@@ -22,3 +22,7 @@ class Entity(Base):
     risk_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
     identifiers: Mapped[list[Any]] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    # Legacy columns are still required by the deployed PostgreSQL schema.
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(50), default="active")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

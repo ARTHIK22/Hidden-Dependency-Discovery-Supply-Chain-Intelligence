@@ -19,7 +19,7 @@ export default function Register() {
     } catch (reason) { setError(userMessage(reason)); } finally { setBusy(false); }
   }
   return <main className="auth-screen"><form className="auth-card" onSubmit={submit}>
-    <span className="eyebrow">SUPPLY INTELLIGENCE</span><h1>Create account</h1><p>Register to start saving private investigations.</p>
+    <span className="eyebrow">SUPPLY INTELLIGENCE</span><h1>Create account</h1><p>Register to join the shared development workspace.</p>
     {error && <div role="alert" className="auth-error">{error}</div>}
     <label>Full name<input autoComplete="name" required maxLength={255} value={fullName} onChange={(event) => setFullName(event.target.value)} /></label>
     <label>Email<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>

@@ -5,6 +5,12 @@
   padding-bottom: 32px;
 }
 
+.watch-target-options { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0; }
+.watch-target-options button { padding: 7px 10px; border: 1px solid var(--glass-border); border-radius: 10px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 10px; cursor: pointer; }
+.watch-target-options button.active { border-color: var(--clay); background: var(--butter-light); color: var(--clay-dark); }
+.watch-threshold { display: flex; align-items: center; gap: 9px; margin: 8px 0 12px; color: var(--text-secondary); font-size: 11px; }
+.watch-threshold input { width: 78px; min-height: 34px; padding: 0 9px; border: 1px solid var(--glass-border); border-radius: 9px; background: var(--glass); color: var(--text-primary); font: inherit; }
+
 .watchlist-header {
   display: flex;
   align-items: flex-end;

@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class EntityRead(BaseModel):
@@ -16,6 +16,14 @@ class EntityRead(BaseModel):
     risk_level: str | None
     identifiers: list[object]
     created_at: datetime
+    normalized_name: str | None = None
+    aliases: list[str] = Field(default_factory=list)
+    canonical_entity_id: UUID | None = None
+    canonical_entity_name: str | None = None
+    resolution_status: str | None = None
+    resolution_confidence: float | None = None
+    evidence_count: int = 0
+    sources: list[str] = Field(default_factory=list)
 
 
 class EntityList(BaseModel):

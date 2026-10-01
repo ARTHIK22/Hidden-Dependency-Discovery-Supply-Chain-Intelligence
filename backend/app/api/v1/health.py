@@ -8,7 +8,7 @@ router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
-def health() -> dict[str, str]:
+def health() -> dict[str, str | bool]:
     database_status = "not_configured"
     if settings.database_url:
         try:
@@ -21,4 +21,5 @@ def health() -> dict[str, str]:
         "status": "ok" if database_status == "connected" else "degraded",
         "database": database_status,
         "environment": settings.app_env,
+        "demo_mode": settings.development_demo_mode,
     }

@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { authStore } from "../stores/auth.store";
-import { getCurrentUser } from "../features/auth/auth.api";
+import { getCurrentUser, logout as logoutRequest } from "../features/auth/auth.api";
 import type { User } from "../types/user.types";
 
 export function useAuth() {
@@ -16,5 +16,12 @@ export function useAuth() {
     getCurrentUser().then((user: User) => { if (active) authStore.setUser(user); }).catch(() => { if (active) authStore.clear(); });
     return () => { active = false; };
   }, [state.loading, state.user]);
-  return { ...state, logout: authStore.clear };
+  const logout = async () => {
+    try {
+      if (authStore.hasToken()) await logoutRequest();
+    } finally {
+      authStore.clear();
+    }
+  };
+  return { ...state, logout };
 }

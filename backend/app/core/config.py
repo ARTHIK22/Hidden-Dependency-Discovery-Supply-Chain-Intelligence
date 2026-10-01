@@ -2,7 +2,7 @@ from functools import lru_cache
 import json
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,8 +21,15 @@ class Settings(BaseSettings):
     jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
+    demo_mode: bool = False
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     log_level: str = "INFO"
+    monitoring_scheduler_enabled: bool = False
+    monitoring_scheduler_tick_seconds: int = Field(default=60, ge=30, le=3600)
+    monitoring_default_interval_minutes: int = Field(default=60, ge=15, le=10080)
+    monitoring_min_interval_minutes: int = Field(default=15, ge=15, le=10080)
+    monitoring_max_interval_minutes: int = Field(default=10080, ge=15, le=10080)
+    monitoring_evidence_freshness_days: int = Field(default=180, ge=1, le=3650)
 
     @field_validator("debug", mode="before")
     @classmethod
@@ -59,6 +66,10 @@ class Settings(BaseSettings):
             for origin in value.split(",")
             if origin.strip()
         ]
+
+    @property
+    def development_demo_mode(self) -> bool:
+        return self.demo_mode and self.app_env.lower() in {"development", "dev", "local"}
 
 
 @lru_cache

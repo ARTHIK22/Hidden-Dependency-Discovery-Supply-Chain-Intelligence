@@ -342,3 +342,5 @@
     flex-direction: column;
   }
 }
+.alerts-header-actions { display: flex; align-items: center; gap: 12px; }
+@media (max-width: 620px) { .alerts-header-actions { align-items: flex-end; flex-direction: column; } }

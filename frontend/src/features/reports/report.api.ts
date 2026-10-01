@@ -1,4 +1,4 @@
-import { apiClient } from "../../services/api/client";
+import { apiClient, apiFetch } from "../../services/api/client";
 import type { ApiList, Report } from "../../types/api.types";
 
 export const listReports = (investigationId?: string, signal?: AbortSignal) =>
@@ -13,5 +13,14 @@ export const generateReport = (investigationId: string) =>
 export const getReport = (id: string, signal?: AbortSignal) =>
   apiClient.get<Report>(`/reports/${encodeURIComponent(id)}`, { signal });
 
-export const downloadReport = (id: string) =>
-  apiClient.get<string>(`/reports/${encodeURIComponent(id)}/download`);
+export const downloadReport = async (id: string, format: "json" | "csv" | "txt" = "txt"): Promise<Blob> => {
+  const response = await apiFetch(`/reports/${encodeURIComponent(id)}/export?format=${format}`);
+  if (!response.ok) {
+    const payload: unknown = await response.json().catch(() => null);
+    const detail = typeof payload === "object" && payload !== null && "detail" in payload
+      ? (payload as { detail?: unknown }).detail
+      : null;
+    throw new Error(typeof detail === "string" ? detail : `Report export failed (${response.status}).`);
+  }
+  return response.blob();
+};

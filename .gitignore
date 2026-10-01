@@ -4,6 +4,8 @@ dist/
 frontend/dist/
 .vite/
 frontend/.vite/
+frontend/test-results/
+frontend/playwright-report/
 backend/venv/
 __pycache__/
 *.py[cod]

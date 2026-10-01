@@ -223,3 +223,4 @@
     flex-direction: column;
   }
 }
+.entity-resolution-notice { margin: 12px 0; padding: 10px 12px; border-radius: 12px; background: rgba(244, 234, 196, .42); color: var(--clay-dark); font-size: 11px; line-height: 1.5; }

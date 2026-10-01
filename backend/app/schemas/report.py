@@ -15,6 +15,7 @@ class ReportRead(BaseModel):
     investigation_id: UUID
     title: str
     content: str
+    structured_content: dict[str, object] | None = None
     created_at: datetime
 
 

@@ -22,6 +22,46 @@
   color: var(--text-secondary);
   font-size: 12px;
 }
+
+.graph-header .graph-demo-notice {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--butter-light);
+  color: var(--clay-dark);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.graph-header .graph-limit-notice {
+  margin: 8px 0 0;
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.graph-page-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.graph-page-controls button {
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+.graph-page-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
 .eyebrow {
   color: var(--clay);
   font-size: 9px;
@@ -83,6 +123,8 @@
   cursor: pointer;
 }
 .graph-filter.active { background: var(--butter-light); color: var(--clay-dark); }
+.graph-filter-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.graph-filter-list .graph-filter { height: 36px; padding: 0 10px; font-size: 10px; }
 .graph-workspace {
   position: relative;
   min-height: 620px;
@@ -110,6 +152,9 @@
   pointer-events: auto;
 }
 .graph-workspace .react-flow {
+  width: 100%;
+  height: 100%;
+  min-height: 620px;
   background: radial-gradient(circle at 50% 40%, rgba(231, 215, 157, 0.13), transparent 42%);
 }
 .graph-node {
@@ -145,6 +190,19 @@
   white-space: nowrap;
 }
 .graph-node-content span { margin-top: 3px; color: var(--text-muted); font-size: 8px; }
+.graph-node-content em {
+  display: inline-block;
+  width: fit-content;
+  margin-top: 3px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: var(--butter-light);
+  color: var(--clay-dark);
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
 .graph-node-risk {
   width: 27px;
   height: 27px;
@@ -158,6 +216,7 @@
 .graph-node.medium .graph-node-risk { background: rgba(169, 120, 88, 0.13); color: var(--clay-dark); }
 .graph-node.high .graph-node-risk { background: rgba(195, 155, 85, 0.17); color: var(--warning); }
 .graph-node.critical .graph-node-risk { background: rgba(181, 111, 104, 0.15); color: var(--danger); }
+.graph-node.unknown .graph-node-risk { width: auto; min-width: 42px; padding: 0 5px; background: rgba(120, 122, 117, 0.12); color: var(--text-muted); font-size: 7px; }
 .react-flow__edge-path { stroke: var(--clay-light); stroke-width: 1.7; }
 .react-flow__edge-text { fill: var(--text-muted); font-size: 8px; }
 .react-flow__edge-textbg { fill: var(--bg-primary); }
@@ -259,3 +318,20 @@
     height: 260px;
   }
 }
+.graph-resolution-note, .graph-conflict-note { margin: 12px 0; padding: 10px 12px; border-radius: 12px; background: var(--butter-light); color: var(--clay-dark); font-size: 11px; line-height: 1.5; }
+.graph-conflict-note { background: rgba(181, 111, 104, .12); color: #8d514c; }
+.relationship-inspector { max-height: 92%; overflow: auto; }
+.graph-evidence-list { display: grid; gap: 10px; margin-top: 14px; }
+.graph-evidence-item { display: grid; gap: 5px; padding: 11px; border: 1px solid var(--glass-border); border-radius: 13px; background: rgba(255, 255, 255, .55); }
+.graph-evidence-item strong { color: var(--text-primary); font-size: 11px; }
+.graph-evidence-item span, .graph-evidence-item small { color: var(--text-muted); font-size: 9px; }
+.graph-evidence-item p { margin: 3px 0; color: var(--text-secondary); font-size: 10px; line-height: 1.45; }
+.graph-evidence-item a { display: inline-flex; align-items: center; gap: 4px; color: var(--clay-dark); font-size: 10px; text-decoration: none; }
+.graph-evidence-item.conflicting { border-color: rgba(181, 111, 104, .45); }
+.graph-evidence-item.supporting { border-color: rgba(117, 141, 104, .42); }
+.graph-status-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 15px; padding: 0 3px; color: var(--text-muted); font-size: 10px; }
+.graph-status-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.graph-status-legend i { width: 17px; height: 3px; border-radius: 99px; background: #758d68; }
+.graph-status-legend i.supported { background: #bc9856; }
+.graph-status-legend i.conflicted { background: #b56f68; }
+.graph-status-legend i.insufficient { height: 0; border-top: 2px dashed #a9aa9f; background: transparent; }

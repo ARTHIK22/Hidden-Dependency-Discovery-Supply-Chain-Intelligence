@@ -8,12 +8,16 @@ import {
   Check,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 import "./profile-menu.css";
 
 export default function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const displayName = user?.full_name || user?.email || "Account";
+  const initials = displayName.split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "U";
 
   useEffect(() => {
     const handleOutside = (event: MouseEvent) => {
@@ -40,11 +44,11 @@ export default function ProfileMenu() {
         aria-expanded={open}
         type="button"
       >
-        <div className="profile-avatar">L</div>
+        <div className="profile-avatar">{initials}</div>
 
         <div className="profile-info">
-          <strong>Local Workspace</strong>
-          <span>No user session</span>
+          <strong>{displayName}</strong>
+          <span>{user?.email}</span>
         </div>
 
         <ChevronDown
@@ -56,11 +60,11 @@ export default function ProfileMenu() {
       {open && (
         <div className="profile-menu">
           <div className="profile-menu-header">
-            <div className="profile-large-avatar">L</div>
+            <div className="profile-large-avatar">{initials}</div>
 
             <div>
-              <strong>Local Workspace</strong>
-              <span>Authentication is not configured</span>
+              <strong>{displayName}</strong>
+              <span>{user?.email}</span>
             </div>
           </div>
 
@@ -113,7 +117,15 @@ export default function ProfileMenu() {
           </div>
 
           <div className="profile-menu-footer">
-            <span className="signout-button" aria-disabled="true">Sign-in and sign-out are not implemented</span>
+            <button
+              className="signout-button"
+              type="button"
+              onClick={async () => {
+                close();
+                try { await logout(); } catch { /* The local session is cleared even if the server cannot be reached. */ }
+                navigate("/login", { replace: true });
+              }}
+            >Sign out</button>
           </div>
         </div>
       )}

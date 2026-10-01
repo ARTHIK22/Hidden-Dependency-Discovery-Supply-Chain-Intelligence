@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
 import Dashboard from "../pages/Dashboard/Dashboard";
 
@@ -24,6 +24,9 @@ import Reports from "../pages/Reports/Reports";
 import Profile from "../pages/Profile/Profile";
 
 import Settings from "../pages/Settings/Settings";
+import AppLayout from "../components/layout/AppLayout";
+import ProtectedRoute from "./ProtectedRoute";
+import { authRoutes } from "./auth.routes";
 
 function PageTransition({
   children,
@@ -64,9 +67,12 @@ export default function AppRoutes() {
         location={location}
         key={location.pathname}
       >
+        {authRoutes}
+
+        <Route element={<ProtectedRoute><AppLayout><Outlet /></AppLayout></ProtectedRoute>}>
         {/* Dashboard */}
         <Route
-          path="/"
+          index
           element={
             <PageTransition>
               <Dashboard />
@@ -76,7 +82,7 @@ export default function AppRoutes() {
 
         {/* Investigations */}
         <Route
-          path="/investigations"
+          path="investigations"
           element={
             <PageTransition>
               <InvestigationHistory />
@@ -85,7 +91,7 @@ export default function AppRoutes() {
         />
 
         <Route
-          path="/investigations/new"
+          path="investigations/new"
           element={
             <PageTransition>
               <CreateInvestigation />
@@ -94,7 +100,7 @@ export default function AppRoutes() {
         />
 
         <Route
-          path="/investigations/:investigationId"
+          path="investigations/:investigationId"
           element={
             <PageTransition>
               <InvestigationDetails />
@@ -104,7 +110,7 @@ export default function AppRoutes() {
 
         {/* Graph */}
         <Route
-          path="/graph"
+          path="graph"
           element={
             <PageTransition>
               <DependencyGraph />
@@ -114,7 +120,7 @@ export default function AppRoutes() {
 
         {/* Evidence */}
         <Route
-          path="/evidence"
+          path="evidence"
           element={
             <PageTransition>
               <Evidence />
@@ -124,7 +130,7 @@ export default function AppRoutes() {
 
         {/* Entities */}
         <Route
-          path="/entities"
+          path="entities"
           element={
             <PageTransition>
               <EntityExplorer />
@@ -134,7 +140,7 @@ export default function AppRoutes() {
 
         {/* Risk */}
         <Route
-          path="/risks"
+          path="risks"
           element={
             <PageTransition>
               <RiskIntelligence />
@@ -144,7 +150,7 @@ export default function AppRoutes() {
 
         {/* Alerts */}
         <Route
-          path="/alerts"
+          path="alerts"
           element={
             <PageTransition>
               <Alerts />
@@ -154,7 +160,7 @@ export default function AppRoutes() {
 
         {/* Watchlist */}
         <Route
-          path="/watchlist"
+          path="watchlist"
           element={
             <PageTransition>
               <Watchlist />
@@ -164,7 +170,7 @@ export default function AppRoutes() {
 
         {/* Reports */}
         <Route
-          path="/reports"
+          path="reports"
           element={
             <PageTransition>
               <Reports />
@@ -174,7 +180,7 @@ export default function AppRoutes() {
 
         {/* Profile */}
         <Route
-          path="/profile"
+          path="profile"
           element={
             <PageTransition>
               <Profile />
@@ -184,13 +190,15 @@ export default function AppRoutes() {
 
         {/* Settings */}
         <Route
-          path="/settings"
+          path="settings"
           element={
             <PageTransition>
               <Settings />
             </PageTransition>
           }
         />
+
+        </Route>
 
         <Route
           path="*"

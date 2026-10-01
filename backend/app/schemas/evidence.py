@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class EvidenceRead(BaseModel):
@@ -22,6 +22,9 @@ class EvidenceRead(BaseModel):
     verification_status: str
     excerpt: str
     source_url: str | None
+    title: str | None = None
+    metadata: dict[str, object] = Field(default_factory=dict)
+    relationship_verification: dict[str, object] | None = None
 
 
 class EvidenceList(BaseModel):

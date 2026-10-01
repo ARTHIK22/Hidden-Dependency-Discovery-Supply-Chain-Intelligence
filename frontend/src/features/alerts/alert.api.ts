@@ -7,5 +7,7 @@ export const listAlerts = (unreadOnly = false, signal?: AbortSignal) =>
 export const markAlertRead = (id: string) =>
   patch<Alert>(`/alerts/${encodeURIComponent(id)}/read`);
 
+export const markAllAlertsRead = () => patch<void>("/alerts/read-all");
+
 export const dismissAlert = (id: string) =>
   remove(`/alerts/${encodeURIComponent(id)}`);

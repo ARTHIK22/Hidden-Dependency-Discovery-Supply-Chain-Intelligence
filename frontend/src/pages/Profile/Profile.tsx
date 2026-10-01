@@ -6,15 +6,19 @@ import {
 } from "lucide-react";
 
 import "./profile-settings.css";
+import { useAuth } from "../../hooks/useAuth";
 
 export default function Profile() {
+  const { user } = useAuth();
+  const displayName = user?.full_name || user?.email || "Account";
+  const initials = displayName.split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "U";
   return (
     <div className="profile-page">
       <div className="profile-card glass-card">
         <div className="profile-cover" />
 
         <div className="profile-avatar">
-          LW
+          {initials}
         </div>
 
         <div className="profile-main">
@@ -22,10 +26,10 @@ export default function Profile() {
             ACCOUNT
           </span>
 
-          <h1>Local Workspace</h1>
+          <h1>{displayName}</h1>
 
           <p>
-            User authentication is not configured for this project.
+            Account details for the shared local development workspace.
           </p>
 
           <div className="profile-info">
@@ -35,7 +39,7 @@ export default function Profile() {
               <span>Account identity</span>
 
               <strong>
-                Not configured
+                {user?.full_name || "Not provided"}
               </strong>
             </div>
 
@@ -45,7 +49,7 @@ export default function Profile() {
               <span>Email</span>
 
               <strong>
-                Not configured
+                {user?.email || "Not provided"}
               </strong>
             </div>
 
@@ -55,7 +59,7 @@ export default function Profile() {
               <span>Workspace</span>
 
               <strong>
-                Local development workspace
+                Shared demo workspace
               </strong>
             </div>
           </div>
@@ -69,8 +73,7 @@ export default function Profile() {
               </strong>
 
               <span>
-                Authentication and session controls
-                are not implemented by the backend.
+                Your account is authenticated with a revocable local access session.
               </span>
             </div>
           </div>

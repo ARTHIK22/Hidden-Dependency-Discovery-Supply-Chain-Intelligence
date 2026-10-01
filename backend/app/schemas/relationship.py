@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RelationshipRead(BaseModel):
@@ -14,3 +14,7 @@ class RelationshipRead(BaseModel):
     source: str | None
     evidence_summary: str | None
     verification_status: str
+    verification: dict[str, object] | None = None
+    evidence_count: int = 0
+    sources: list[str] = Field(default_factory=list)
+    conflict_flag: bool = False

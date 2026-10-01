@@ -13,8 +13,16 @@ export type RelationshipRecord = {
 };
 
 // The current backend exposes relationship data through the graph endpoint.
-export const getDependencyGraph = (signal?: AbortSignal) =>
-  get<{ nodes: GraphNode[]; edges: GraphEdge[] }>("/graph", signal);
+export const getDependencyGraph = (signal?: AbortSignal, limit = 500, offset = 0) =>
+  get<{
+    nodes: GraphNode[];
+    edges: GraphEdge[];
+    has_more?: boolean;
+    has_more_entities?: boolean;
+    has_more_relationships?: boolean;
+    limit?: number;
+    offset?: number;
+  }>(`/graph?limit=${limit}&offset=${offset}`, signal);
 
 export const listRelationships = async (signal?: AbortSignal): Promise<RelationshipRecord[]> => {
   const { nodes, edges } = await getDependencyGraph(signal);

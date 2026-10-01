@@ -4,53 +4,29 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
-from app.core.database import Base
-
-# Import every model so Alembic can detect them.
-from app.models import (
-    AuditLog,
-    Alert,
-    Entity,
-    EntityAlias,
-    Evidence,
-    Investigation,
-    Organization,
-    Relationship,
-    Report,
-    Risk,
-    Source,
-    User,
-    Watchlist,
-)
+from app.models import Base
+import app.models  # noqa: F401 - register active models
 
 
 config = context.config
-
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+if not settings.database_url:
+    raise RuntimeError("DATABASE_URL must be configured before running Alembic")
 
-config.set_main_option(
-    "sqlalchemy.url",
-    settings.DATABASE_URL.replace("%", "%%"),
-)
-
-
+config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    url = settings.DATABASE_URL
-
     context.configure(
-        url=url,
+        url=settings.database_url,
         target_metadata=target_metadata,
         literal_binds=True,
-        dialect_opts={
-            "paramstyle": "named",
-        },
+        dialect_opts={"paramstyle": "named"},
+        compare_type=True,
     )
-
     with context.begin_transaction():
         context.run_migrations()
 
@@ -61,13 +37,8 @@ def run_migrations_online() -> None:
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
-
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-        )
-
+        context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
         with context.begin_transaction():
             context.run_migrations()
 

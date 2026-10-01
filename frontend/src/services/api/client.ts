@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../../config/env";
+import { authHeaders, onUnauthorized } from "./interceptors";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -28,7 +29,7 @@ export function apiUrl(path: string): string {
 }
 
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const headers = new Headers(init.headers);
+  const headers = authHeaders(init.headers);
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
@@ -53,6 +54,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     : await response.text().catch(() => "");
 
   if (!response.ok) {
+    if (response.status === 401) onUnauthorized(path);
     const detail =
       typeof payload === "object" && payload !== null && "detail" in payload
         ? (payload as { detail?: unknown }).detail
@@ -165,5 +167,10 @@ export function queryString(values: Record<string, string | number | boolean | u
 
 // Retained for existing callers that need to inspect a raw Response.
 export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
-  return fetch(apiUrl(path), init);
+  const headers = authHeaders(init?.headers);
+  headers.set("Accept", "application/json");
+  return fetch(apiUrl(path), { ...init, headers }).then((response) => {
+    if (response.status === 401) onUnauthorized(path);
+    return response;
+  });
 }
