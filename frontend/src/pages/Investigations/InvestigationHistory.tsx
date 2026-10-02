@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, CheckCircle2, Clock3, Search, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { listInvestigations } from "../../features/investigations/investigation.api";
-import { ErrorState, LoadingState } from "../../components/states/AsyncStates";
+import { EmptyState, ErrorState, LoadingState } from "../../components/states/AsyncStates";
 import type { Investigation } from "../../types/api.types";
 import "./investigation-history.css";
 
@@ -43,7 +43,7 @@ export default function InvestigationHistory() {
               <span className={`history-status ${isCompleted ? "done" : "review"}`}>{item.status}</span><ArrowRight size={16} />
             </button>;
           })}
-          {!filtered.length && <div className="history-row glass-card">{items.length ? "No investigations match this search." : "No investigations have been saved yet."}</div>}
+          {!filtered.length && <EmptyState title={items.length ? "No matching investigations" : "No investigations yet"} description={items.length ? "Try another name or clear the search." : "Create an investigation plan to start exploring your dependency network."} action={items.length ? () => setQuery("") : () => navigate("/investigations/new")} actionLabel={items.length ? "Clear search" : "Create investigation"} />}
         </div>
       )}
     </div>

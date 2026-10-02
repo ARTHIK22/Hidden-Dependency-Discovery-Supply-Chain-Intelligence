@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("authenticated demo workflow works across the main product areas", async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(180_000);
   const runMarker = process.env.HDI_E2E_RUN_MARKER ?? `local-${Date.now()}`;
   const email = `qa-${runMarker}@example.test`;
   const password = "Demo-Only-Password-42";
@@ -160,6 +160,10 @@ test("authenticated demo workflow works across the main product areas", async ({
 
   console.log(`Isolated E2E run marker: ${runMarker}; user: ${email}`);
   await page.getByRole("button", { name: "Open profile menu" }).click();
+  await expect(page.getByRole("button", { name: "My Profile" })).toBeVisible();
+  await expect(page.getByText("Development Workspace")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Settings", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Preferences" })).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel("Email", { exact: true }).fill(email);
@@ -167,12 +171,103 @@ test("authenticated demo workflow works across the main product areas", async ({
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL("http://localhost:5175/");
 
-  for (const viewport of [{ width: 1024, height: 768 }, { width: 768, height: 1024 }, { width: 390, height: 844 }]) {
+  for (const viewport of [
+    { width: 1920, height: 1080 },
+    { width: 1440, height: 900 },
+    { width: 1366, height: 768 },
+    { width: 1280, height: 800 },
+    { width: 1024, height: 768 },
+    { width: 900, height: 800 },
+    { width: 768, height: 1024 },
+    { width: 390, height: 844 },
+  ]) {
     await page.setViewportSize(viewport);
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Investigate hidden dependencies." })).toBeVisible();
-    const overflowsHorizontally = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
-    expect(overflowsHorizontally).toBe(false);
+    const dashboardOverflowsHorizontally = await page.evaluate(() => {
+      const shell = document.querySelector<HTMLElement>(".app-shell");
+      return document.documentElement.scrollWidth > window.innerWidth + 1 || (shell?.scrollWidth ?? 0) > window.innerWidth + 1;
+    });
+    expect(dashboardOverflowsHorizontally, `dashboard overflow at ${viewport.width}px`).toBe(false);
+
+    await page.goto("/reports");
+    await expect(page.getByRole("heading", { name: "Investigation Report", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open profile menu" })).toBeVisible();
+    const reportLayout = await page.evaluate(() => {
+      const bounds = (selector: string) => {
+        const element = document.querySelector<HTMLElement>(selector);
+        if (!element) return null;
+        const rect = element.getBoundingClientRect();
+        return { right: rect.right, clientWidth: element.clientWidth, scrollWidth: element.scrollWidth };
+      };
+      return {
+        documentOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+        appShellOverflow: (document.querySelector<HTMLElement>(".app-shell")?.scrollWidth ?? 0) > window.innerWidth + 1,
+        hero: bounds(".report-hero"),
+        controls: bounds(".report-controls"),
+        title: bounds(".report-heading h1"),
+        profile: bounds(".profile-trigger"),
+        profileDetails: (() => {
+          const trigger = document.querySelector<HTMLButtonElement>(".profile-trigger");
+          const avatar = trigger?.querySelector<HTMLElement>(".profile-trigger-avatar");
+          const userInfo = trigger?.querySelector<HTMLElement>(".profile-user-info");
+          const chevron = trigger?.querySelector<HTMLElement>(".profile-chevron");
+          const notification = document.querySelector<HTMLElement>(".notification-trigger");
+          if (!trigger || !avatar || !userInfo || !chevron || !notification) return null;
+          const triggerRect = trigger.getBoundingClientRect();
+          const avatarRect = avatar.getBoundingClientRect();
+          const chevronRect = chevron.getBoundingClientRect();
+          const notificationRect = notification.getBoundingClientRect();
+          const avatarStyle = getComputedStyle(avatar);
+          return {
+            avatarIsInsideTrigger: trigger.contains(avatar),
+            avatarIsWithinTrigger: avatarRect.left >= triggerRect.left && avatarRect.right <= triggerRect.right && avatarRect.top >= triggerRect.top && avatarRect.bottom <= triggerRect.bottom,
+            avatarPosition: avatarStyle.position,
+            avatarMarginTop: avatarStyle.marginTop,
+            chevronIsVisible: chevron.getClientRects().length > 0,
+            chevronIsWithinTrigger: chevronRect.left >= triggerRect.left && chevronRect.right <= triggerRect.right && chevronRect.top >= triggerRect.top && chevronRect.bottom <= triggerRect.bottom,
+            userInfoVisible: getComputedStyle(userInfo).display !== "none",
+            centerDifference: Math.abs((triggerRect.top + triggerRect.bottom) / 2 - (notificationRect.top + notificationRect.bottom) / 2),
+          };
+        })(),
+      };
+    });
+    expect(reportLayout.documentOverflow, `reports overflow at ${viewport.width}px`).toBe(false);
+    expect(reportLayout.appShellOverflow, `reports app shell overflows at ${viewport.width}px`).toBe(false);
+    expect(reportLayout.hero).not.toBeNull();
+    expect(reportLayout.controls).not.toBeNull();
+    expect(reportLayout.title).not.toBeNull();
+    expect(reportLayout.profile).not.toBeNull();
+    expect(reportLayout.profileDetails).not.toBeNull();
+    expect(reportLayout.profileDetails!.avatarIsInsideTrigger).toBe(true);
+    expect(reportLayout.profileDetails!.avatarIsWithinTrigger).toBe(true);
+    expect(reportLayout.profileDetails!.avatarPosition).toBe("static");
+    expect(reportLayout.profileDetails!.avatarMarginTop).toBe("0px");
+    expect(reportLayout.profileDetails!.chevronIsVisible).toBe(true);
+    expect(reportLayout.profileDetails!.chevronIsWithinTrigger).toBe(true);
+    expect(reportLayout.profileDetails!.userInfoVisible).toBe(viewport.width > 900);
+    expect(reportLayout.profileDetails!.centerDifference).toBeLessThanOrEqual(1);
+    expect(reportLayout.controls!.scrollWidth, `report controls overflow at ${viewport.width}px`).toBeLessThanOrEqual(reportLayout.controls!.clientWidth + 1);
+    expect(reportLayout.title!.scrollWidth, `report title overflows at ${viewport.width}px`).toBeLessThanOrEqual(reportLayout.title!.clientWidth + 1);
+    expect(reportLayout.controls!.right, `report controls exceed hero at ${viewport.width}px`).toBeLessThanOrEqual(reportLayout.hero!.right + 1);
+    expect(reportLayout.profile!.right, `profile exceeds viewport at ${viewport.width}px`).toBeLessThanOrEqual(viewport.width + 1);
+
+    if (viewport.width === 768 || viewport.width === 390) {
+      await page.getByRole("button", { name: "Open profile menu" }).click();
+      await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+      await page.locator(".profile-menu").evaluate(async (menu) => {
+        await Promise.all(menu.getAnimations().map((animation) => animation.finished));
+      });
+      const dropdownBounds = await page.evaluate(() => {
+        const profile = document.querySelector<HTMLElement>(".profile-trigger")!.getBoundingClientRect();
+        const menu = document.querySelector<HTMLElement>(".profile-menu")!.getBoundingClientRect();
+        return { profileBottom: profile.bottom, left: menu.left, right: menu.right, top: menu.top };
+      });
+      expect(dropdownBounds.top).toBeGreaterThanOrEqual(dropdownBounds.profileBottom + 7);
+      expect(dropdownBounds.left).toBeGreaterThanOrEqual(0);
+      expect(dropdownBounds.right).toBeLessThanOrEqual(viewport.width + 1);
+      await page.getByRole("button", { name: "Open profile menu" }).click();
+    }
   }
 
   expect(apiErrors).toEqual([]);

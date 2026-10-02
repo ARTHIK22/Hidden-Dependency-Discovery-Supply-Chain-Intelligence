@@ -181,10 +181,10 @@ export default function DependencyGraph() {
     .map((edge) => {
       const isConnected = edge.source === selectedId || edge.target === selectedId;
       const status = String((edge.data as { verificationStatus?: string } | undefined)?.verificationStatus ?? "").toUpperCase();
-      const stroke = status === "VERIFIED" ? "#758d68"
-        : status === "SUPPORTED" ? "#bc9856"
-          : status === "CONFLICTED" || status === "REJECTED" ? "#b56f68"
-            : "#a9aa9f";
+      const stroke = status === "VERIFIED" ? "var(--success)"
+        : status === "SUPPORTED" ? "var(--warning)"
+          : status === "CONFLICTED" || status === "REJECTED" ? "var(--danger)"
+            : "var(--text-muted)";
       return {
         ...edge,
         animated: isConnected,
@@ -263,11 +263,11 @@ export default function DependencyGraph() {
           <MiniMap
             nodeColor={(node) => {
               const risk = (node.data as EntityNodeData | undefined)?.risk;
-              if (risk === null || risk === undefined) return "#a9aa9f";
-              if (risk >= 75) return "#b56f68";
-              if (risk >= 50) return "#c39b55";
-              if (risk >= 25) return "#a97858";
-              return "#758d68";
+              if (risk === null || risk === undefined) return "var(--text-muted)";
+              if (risk >= 75) return "var(--danger)";
+              if (risk >= 50) return "var(--warning)";
+              if (risk >= 25) return "var(--clay)";
+              return "var(--success)";
             }}
           />
         </ReactFlow>

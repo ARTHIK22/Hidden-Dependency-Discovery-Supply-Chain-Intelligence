@@ -11,6 +11,7 @@ type Props = {
   title?: string;
   description?: string;
   action?: () => void;
+  actionLabel?: string;
 };
 
 export function LoadingState({
@@ -38,6 +39,7 @@ export function EmptyState({
   title = "Nothing here yet",
   description = "There is no data to display.",
   action,
+  actionLabel = "Try again",
 }: Props) {
   return (
     <div className="async-state glass-card">
@@ -50,7 +52,7 @@ export function EmptyState({
       {action && (
         <button onClick={action}>
           <RefreshCcw size={14} />
-          Try again
+          {actionLabel}
         </button>
       )}
     </div>

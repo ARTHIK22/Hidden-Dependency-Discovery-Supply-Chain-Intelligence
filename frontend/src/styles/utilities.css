@@ -1,0 +1,292 @@
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol {
+  margin-bottom: 0;
+  margin-top: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+ul,
+ol {
+  padding-left: 1.25em;
+}
+
+.hero-content h2 {
+  font-size: clamp(30px, 3vw, 42px);
+}
+
+.app-header {
+  position: sticky;
+  top: 10px;
+  z-index: 40;
+  margin: 2px 8px 0;
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 253, 247, 0.46);
+  -webkit-backdrop-filter: blur(22px) saturate(120%);
+  backdrop-filter: blur(22px) saturate(120%);
+  box-shadow: var(--shadow-inset);
+}
+
+.app-main > div {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+}
+
+.page-content {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.history-page,
+.entity-page,
+.evidence-page,
+.reports-page,
+.profile-page,
+.settings-page {
+  width: 100%;
+  max-width: var(--content-max);
+}
+
+.history-heading h1,
+.entity-heading h1,
+.page-heading-row h1,
+.alerts-header h1,
+.watchlist-header h1,
+.risk-header h1,
+.investigation-hero h1,
+.investigation-title-row h1,
+.report-hero h1,
+.profile-main h1,
+.settings-heading h1 {
+  font-size: clamp(28px, 2.3vw, 34px);
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+}
+
+.eyebrow,
+.drawer-label,
+.section-label,
+.section-label,
+.risk-kicker,
+.alerts-eyebrow,
+.watchlist-eyebrow {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.glass-card:hover,
+.watch-card:hover,
+.alert-card:hover,
+.evidence-row:hover,
+.history-row:hover {
+  border-color: rgba(169, 120, 88, 0.22);
+}
+
+.history-row,
+.evidence-row,
+.alert-card,
+.watch-card {
+  box-shadow: var(--shadow-inset);
+}
+
+.demo-mode-banner,
+.risk-demo-notice,
+.research-demo-notice {
+  border-color: rgba(169, 120, 88, 0.2);
+  border-radius: var(--radius-md);
+  background: rgba(231, 215, 157, 0.24);
+  color: var(--clay-dark);
+  line-height: 1.5;
+}
+
+.graph-limit-notice {
+  color: var(--text-muted);
+}
+
+.monitoring-state-pill {
+  border: 1px solid var(--glass-border-dark);
+  background: rgba(255, 253, 247, 0.55);
+  color: var(--text-secondary);
+}
+
+.monitoring-state-pill.is-enabled {
+  border-color: rgba(117, 141, 104, 0.24);
+  background: rgba(117, 141, 104, 0.1);
+  color: #536b49;
+}
+
+.monitoring-intro,
+.monitoring-stats span,
+.monitoring-list-block h3 span,
+.monitoring-item time,
+.monitoring-item small,
+.monitoring-empty,
+.monitoring-timeline-event {
+  color: var(--text-muted);
+}
+
+.monitoring-stats > div,
+.monitoring-list-block {
+  border-color: var(--glass-border-dark);
+  border-radius: var(--radius-md);
+  background: rgba(255, 253, 247, 0.46);
+}
+
+.monitoring-stats strong,
+.monitoring-list-block h3,
+.monitoring-item p,
+.monitoring-timeline-event strong {
+  color: var(--text-primary);
+}
+
+.monitoring-item > strong,
+.monitoring-item > div > strong {
+  color: var(--clay-dark);
+}
+
+.monitoring-item,
+.monitoring-timeline {
+  border-color: var(--glass-border-dark);
+}
+
+.monitoring-controls label {
+  color: var(--text-secondary);
+}
+
+.monitoring-controls select {
+  border: 1px solid var(--glass-border-dark);
+  border-radius: var(--radius-sm);
+  background: var(--glass-strong);
+  color: var(--text-primary);
+}
+
+.monitoring-disable {
+  border: 1px solid var(--glass-border-dark);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 253, 247, 0.54);
+  color: var(--text-secondary);
+}
+
+.monitoring-item button {
+  color: var(--clay-dark);
+}
+
+.decision-priority {
+  color: var(--text-secondary);
+  background: rgba(113, 106, 96, 0.1);
+}
+
+.decision-priority.priority-high {
+  color: #8c4f49;
+  background: rgba(181, 111, 104, 0.12);
+}
+
+.monitoring-timeline-event time {
+  color: var(--clay-dark);
+}
+
+@media (max-width: 1000px) {
+  .app-shell {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .page-content {
+    padding: 20px 20px 28px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .header-create-action span {
+    display: none;
+  }
+
+  .header-create-action {
+    width: 38px;
+    padding: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .page-content {
+    padding: 16px 14px 24px;
+  }
+
+  .history-page,
+  .entity-page,
+  .evidence-page,
+  .profile-page,
+  .settings-page {
+    padding: 18px 14px;
+  }
+
+  .history-heading,
+  .entity-heading,
+  .page-heading-row,
+  .alerts-header,
+  .watchlist-header,
+  .risk-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .profile-page,
+  .settings-page {
+    padding: 18px 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .glass-section,
+  .alerts-container,
+  .watchlist-container {
+    padding: 17px;
+    border-radius: var(--radius-lg);
+  }
+
+  .report-metrics,
+  .stats-grid,
+  .watchlist-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .monitoring-timeline-event {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+}

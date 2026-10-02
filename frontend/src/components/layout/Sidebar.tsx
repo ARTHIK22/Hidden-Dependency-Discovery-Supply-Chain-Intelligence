@@ -8,9 +8,13 @@ import {
 	Star,
 	FileText,
 	Settings,
+	UserRound,
+	GitBranch,
+	Database,
 	ChevronRight,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 import "./sidebar.css";
 
@@ -19,6 +23,7 @@ const navigation = [
 	{ label: "Investigations", icon: FolderSearch, path: "/investigations" },
 	{ label: "Dependency Graph", icon: Network, path: "/graph" },
 	{ label: "Entities", icon: Search, path: "/entities" },
+	{ label: "Relationships", icon: GitBranch, path: "/relationships" },
 	{ label: "Evidence", icon: FileText, path: "/evidence" },
 	{ label: "Risk Intelligence", icon: ShieldAlert, path: "/risks" },
 	{ label: "Alerts", icon: Bell, path: "/alerts" },
@@ -26,9 +31,18 @@ const navigation = [
 	{ label: "Reports", icon: FileText, path: "/reports" },
 ];
 
-function Sidebar() {
+interface SidebarProps {
+	mobileOpen: boolean;
+	onNavigate: () => void;
+}
+
+function Sidebar({ mobileOpen, onNavigate }: SidebarProps) {
+	const { user } = useAuth();
+	const displayName = user?.full_name || user?.email || "Account";
+	const initials = displayName.split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "U";
+
 	return (
-		<aside className="sidebar glass">
+		<aside className={`sidebar glass ${mobileOpen ? "mobile-open" : ""}`} aria-label="Main navigation">
 			<div className="sidebar-brand">
 				<div className="brand-mark">HD</div>
 
@@ -49,6 +63,8 @@ function Sidebar() {
 							<NavLink
 								key={item.label}
 								to={item.path}
+								onClick={onNavigate}
+								aria-label={item.label}
 								className={({ isActive }) =>
 									`sidebar-item ${isActive ? "active" : ""}`
 								}
@@ -74,6 +90,8 @@ function Sidebar() {
 			<div className="sidebar-bottom">
 				<NavLink
 					to="/settings"
+					onClick={onNavigate}
+					aria-label="Settings"
 					className={({ isActive }) =>
 						`sidebar-item ${isActive ? "active" : ""}`
 					}
@@ -82,11 +100,22 @@ function Sidebar() {
 					<span>Settings</span>
 				</NavLink>
 
+				<NavLink
+					to="/profile"
+					onClick={onNavigate}
+					aria-label={`${displayName} profile`}
+					className={({ isActive }) => `sidebar-profile ${isActive ? "active" : ""}`}
+				>
+					<span className="sidebar-avatar" aria-hidden="true">{initials}</span>
+					<span className="sidebar-profile-copy"><strong>{displayName}</strong><small>Workspace profile</small></span>
+					<UserRound size={16} className="sidebar-profile-icon" />
+				</NavLink>
+
 				<div className="sidebar-status">
-					<span className="status-dot" />
+					<span className="sidebar-status-mark"><Database size={14} /></span>
 					<div>
-						<strong>Intelligence Engine</strong>
-						<small>Ready for investigation</small>
+						<strong>Data provenance</strong>
+						<small>Persisted workspace records</small>
 					</div>
 				</div>
 			</div>

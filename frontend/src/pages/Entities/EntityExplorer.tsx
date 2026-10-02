@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Building2, Factory, Globe2, Layers3, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getEntity, listEntities } from "../../features/entities/entity.api";
-import { ErrorState, LoadingState } from "../../components/states/AsyncStates";
+import { EmptyState, ErrorState, LoadingState } from "../../components/states/AsyncStates";
 import type { Entity as EntityRecord, EntityDetail } from "../../types/api.types";
 import "./entity-explorer.css";
 
@@ -54,7 +54,7 @@ export default function EntityExplorer() {
     <div className="entity-layout">
       <aside className="entity-list glass-card"><div className="entity-search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search entities..." /></div>
         {loading ? <LoadingState label="Loading entities..." /> : error ? <ErrorState title="Entities are unavailable" action={() => window.location.reload()} /> : items.map((entity) => <button className={`entity-item ${selectedId === entity.id ? "active" : ""}`} key={entity.id} onClick={() => setSelectedId(entity.id)}><span className="entity-dot"><EntityIcon type={entity.entity_type} /></span><span><strong>{entity.name}</strong><small>{entity.entity_type} · Risk {entity.risk_score ?? "unassessed"}</small></span><b>{entity.risk_score ?? "—"}</b></button>)}
-        {!loading && !error && items.length === 0 && <p className="empty-event">No entities have been recorded{query ? " for this search" : " yet"}.</p>}
+        {!loading && !error && items.length === 0 && <EmptyState title={query ? "No matching entities" : "No entities yet"} description={query ? "Try a different name or clear the search." : "Entities appear here as investigations record their dependency data."} action={query ? () => setQuery("") : undefined} actionLabel="Clear search" />}
       </aside>
       <main className="entity-detail glass-card">
         {detailLoading ? <LoadingState label="Loading entity details..." /> : selected ? <>
@@ -67,7 +67,7 @@ export default function EntityExplorer() {
           <div className="entity-section"><span className="drawer-label">ALIASES</span><div className="tag-row">{selected.aliases?.length ? selected.aliases.map((alias) => <span key={alias}>{alias}</span>) : <span>No aliases recorded</span>}</div></div>
           <div className="entity-section"><span className="drawer-label">SOURCES</span><div className="tag-row">{selected.sources?.length ? selected.sources.map((source) => <span key={source}>{source}</span>) : <span>No source provenance recorded</span>}</div></div>
           <div className="entity-section"><span className="drawer-label">RELATIONSHIPS</span><div className="relationship-cards">{selected.connections.length ? selected.connections.map((connection) => <button key={connection.id} onClick={() => navigate("/graph")}><strong>{connection.direction === "outgoing" ? `${selected.name} → ${connection.entity_name}` : `${connection.entity_name} → ${selected.name}`}</strong><span>{connection.relationship_type} · {connection.verification_status}<ArrowRight size={14} /></span></button>) : <p>No relationships have been recorded for this entity.</p>}<button onClick={() => navigate("/evidence")}><strong>Supporting evidence</strong><span>View recorded provenance<ArrowRight size={14} /></span></button></div></div>
-        </> : <p className="empty-event">Select an entity to inspect its recorded details.</p>}
+        </> : <EmptyState title="Select an entity" description="Choose a record to review its identity, source provenance, risk and relationships." />}
       </main>
     </div>
   </div>;

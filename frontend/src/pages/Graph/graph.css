@@ -37,7 +37,7 @@
 
 .graph-header .graph-limit-notice {
   margin: 8px 0 0;
-  color: var(--ink-muted);
+  color: var(--text-muted);
   font-size: 0.82rem;
   line-height: 1.45;
 }
@@ -53,7 +53,7 @@
   border: 1px solid var(--glass-border);
   border-radius: 999px;
   padding: 7px 11px;
-  background: var(--glass-bg);
+  background: var(--glass);
   color: var(--text-primary);
   font: inherit;
   cursor: pointer;
@@ -220,6 +220,14 @@
 .react-flow__edge-path { stroke: var(--clay-light); stroke-width: 1.7; }
 .react-flow__edge-text { fill: var(--text-muted); font-size: 8px; }
 .react-flow__edge-textbg { fill: var(--bg-primary); }
+.react-flow__node.selected .graph-node { border-color: var(--clay); box-shadow: 0 0 0 3px rgba(169,120,88,.16), var(--shadow-floating); }
+.react-flow__controls { overflow: hidden; border: 1px solid var(--glass-border); border-radius: 14px; background: rgba(255,253,247,.82); box-shadow: var(--shadow-card), var(--shadow-inset); }
+.react-flow__controls-button { width: 34px; height: 34px; border-bottom: 1px solid var(--glass-border-dark); background: transparent; fill: var(--text-secondary); }
+.react-flow__controls-button:hover { background: var(--butter-light); fill: var(--clay-dark); }
+.react-flow__controls-button:last-child { border-bottom: 0; }
+.react-flow__minimap { overflow: hidden; border: 1px solid var(--glass-border); border-radius: 15px; background: rgba(255,253,247,.82); box-shadow: var(--shadow-card); }
+.react-flow__minimap-mask { fill: rgba(238,233,223,.54); }
+.react-flow__handle { border: 1px solid rgba(255,255,255,.92); background: var(--clay); }
 .graph-inspector {
   position: absolute;
   top: 14px;
@@ -331,7 +339,7 @@
 .graph-evidence-item.supporting { border-color: rgba(117, 141, 104, .42); }
 .graph-status-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 15px; padding: 0 3px; color: var(--text-muted); font-size: 10px; }
 .graph-status-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.graph-status-legend i { width: 17px; height: 3px; border-radius: 99px; background: #758d68; }
-.graph-status-legend i.supported { background: #bc9856; }
-.graph-status-legend i.conflicted { background: #b56f68; }
+.graph-status-legend i { width: 17px; height: 3px; border-radius: 99px; background: var(--success); }
+.graph-status-legend i.supported { background: var(--warning); }
+.graph-status-legend i.conflicted { background: var(--danger); }
 .graph-status-legend i.insufficient { height: 0; border-top: 2px dashed #a9aa9f; background: transparent; }

@@ -44,12 +44,12 @@ export default function ProfileMenu() {
         aria-expanded={open}
         type="button"
       >
-        <div className="profile-avatar">{initials}</div>
+        <span className="profile-trigger-avatar" aria-hidden="true">{initials}</span>
 
-        <div className="profile-info">
-          <strong>{displayName}</strong>
-          <span>{user?.email}</span>
-        </div>
+        <span className="profile-user-info">
+          <span className="profile-user-name">{displayName}</span>
+          <span className="profile-user-email">{user?.email}</span>
+        </span>
 
         <ChevronDown
           size={15}

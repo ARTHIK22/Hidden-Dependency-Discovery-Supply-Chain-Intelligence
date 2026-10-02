@@ -12,6 +12,7 @@ import DependencyGraph from "../pages/Graph/DependencyGraph";
 import Evidence from "../pages/Evidence/Evidence";
 
 import EntityExplorer from "../pages/Entities/EntityExplorer";
+import RelationshipList from "../pages/Relationships/RelationshipList";
 
 import RiskIntelligence from "../pages/Risks/RiskIntelligence";
 
@@ -71,6 +72,7 @@ export default function AppRoutes() {
 
         <Route element={<ProtectedRoute><AppLayout><Outlet /></AppLayout></ProtectedRoute>}>
         {/* Dashboard */}
+        <Route path="dashboard" element={<Navigate to="/" replace />} />
         <Route
           index
           element={
@@ -134,6 +136,15 @@ export default function AppRoutes() {
           element={
             <PageTransition>
               <EntityExplorer />
+            </PageTransition>
+          }
+        />
+
+        <Route
+          path="relationships"
+          element={
+            <PageTransition>
+              <RelationshipList />
             </PageTransition>
           }
         />

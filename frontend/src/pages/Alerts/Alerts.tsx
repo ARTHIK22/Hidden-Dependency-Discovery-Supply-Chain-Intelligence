@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowRight, Bell, CheckCircle2, Clock3, ShieldAlert, ShieldCheck } from "lucide-react";
 import { dismissAlert, listAlerts, markAlertRead, markAllAlertsRead } from "../../features/alerts/alert.api";
-import { ErrorState, LoadingState } from "../../components/states/AsyncStates";
+import { EmptyState, ErrorState, LoadingState } from "../../components/states/AsyncStates";
 import type { Alert } from "../../types/api.types";
 import "./alerts.css";
 
@@ -65,8 +65,8 @@ function Alerts() {
     <section className="alerts-summary"><AlertSummary icon={<ShieldAlert size={20} />} value={criticalCount} label="Critical" kind="critical" /><AlertSummary icon={<AlertTriangle size={20} />} value={highCount} label="High Risk" kind="high" /><AlertSummary icon={<ShieldCheck size={20} />} value={verificationCount} label="Needs Verification" kind="verification" /><AlertSummary icon={<CheckCircle2 size={20} />} value={alerts.filter((alert) => !!alert.read_at).length} label="Read" kind="resolved" /></section>
     <section className="alerts-container"><div className="alerts-section-heading"><div><span>DEPENDENCY ALERTS</span><h2>Recent Activity</h2></div><span className="alerts-filter">All Alerts</span></div>
       {loading ? <LoadingState label="Loading alerts..." /> : error ? <ErrorState title="Alerts are unavailable" description="Check the backend and PostgreSQL connection." action={() => window.location.reload()} /> : <div className="alerts-list">
-        {alerts.map((alert) => { const Icon = iconMap[alert.type]; return <article className={`alert-card ${alert.type}`} data-alert-id={alert.id} key={alert.id}><div className="alert-card-icon"><Icon size={21} /></div><div className="alert-card-content"><div className="alert-title-row"><div><span className="alert-type">{alert.severity} · {alert.title}</span><h3>{alert.entity}</h3></div></div><p>{alert.message}</p><div className="alert-footer"><span className="alert-time"><Clock3 size={14} />{new Date(alert.created_at).toLocaleString()}</span><div><button className="alert-action" onClick={() => void handleRead(alert)} disabled={!!alert.read_at || busyId === alert.id}>{alert.read_at ? "Read" : busyId === alert.id ? "Saving..." : "Mark read"}<ArrowRight size={15} /></button><button className="alert-action" onClick={() => void handleDismiss(alert)} disabled={busyId === alert.id}>Dismiss</button></div></div></div></article>; })}
-        {!alerts.length && <p className="empty-event">No alerts have been recorded yet.</p>}
+        {alerts.map((alert) => { const Icon = iconMap[alert.type]; const readState = alert.read_at ? "read" : "unread"; return <article className={`alert-card ${alert.type} ${readState}`} aria-label={`${alert.read_at ? "Read" : "Unread"} alert: ${alert.title}`} data-alert-id={alert.id} key={alert.id}><div className="alert-card-icon"><Icon size={21} /></div><div className="alert-card-content"><div className="alert-title-row"><div><span className="alert-type">{alert.severity} · {alert.title}</span><h3>{alert.entity}</h3></div></div><p>{alert.message}</p><div className="alert-footer"><span className="alert-time"><Clock3 size={14} />{new Date(alert.created_at).toLocaleString()}</span><div><button className="alert-action" onClick={() => void handleRead(alert)} disabled={!!alert.read_at || busyId === alert.id}>{alert.read_at ? "Read" : busyId === alert.id ? "Saving..." : "Mark read"}<ArrowRight size={15} /></button><button className="alert-action" onClick={() => void handleDismiss(alert)} disabled={busyId === alert.id}>Dismiss</button></div></div></div></article>; })}
+        {!alerts.length && <EmptyState title="No alerts recorded" description="Alerts appear here when monitoring or investigation processes create them." />}
       </div>}
     </section>
   </div>;
