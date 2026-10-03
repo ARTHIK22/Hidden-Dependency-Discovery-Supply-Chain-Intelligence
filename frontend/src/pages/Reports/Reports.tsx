@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Download, FileText, ShieldAlert, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, FileText, ShieldAlert, Sparkles, TrendingUp } from "lucide-react";
 import { useToast } from "../../components/toast/ToastProvider";
 import { ErrorState, LoadingState } from "../../components/states/AsyncStates";
 import { listInvestigations, getInvestigation } from "../../features/investigations/investigation.api";
 import { downloadReport, generateReport, listReports } from "../../features/exports/export.api";
 import type { Investigation, InvestigationDetail, Report } from "../../types/api.types";
+import ReportDocument from "./ReportDocument";
 import "./reports.css";
 
 export default function Reports() {
@@ -25,20 +26,24 @@ export default function Reports() {
     ]);
     setReports(reportList.items);
     setInvestigations(investigationList.items);
-    setSelectedReport((current) => current ?? reportList.items[0] ?? null);
     setSelectedInvestigationId((current) => current || investigationList.items[0]?.id || "");
   };
 
   useEffect(() => {
     const controller = new AbortController();
-    reload(controller.signal).then(() => setError(false)).catch((cause) => { if (!controller.signal.aborted) { console.error(cause); setError(true); } }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    reload(controller.signal)
+      .then(() => setError(false))
+      .catch((cause) => { if (!controller.signal.aborted) { console.error(cause); setError(true); } })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, []);
 
   useEffect(() => {
     if (!selectedReport) { setDetail(null); return; }
     const controller = new AbortController();
-    getInvestigation(selectedReport.investigation_id, controller.signal).then(setDetail).catch((cause) => { if (!controller.signal.aborted) console.error(cause); });
+    getInvestigation(selectedReport.investigation_id, controller.signal)
+      .then(setDetail)
+      .catch((cause) => { if (!controller.signal.aborted) console.error(cause); });
     return () => controller.abort();
   }, [selectedReport]);
 
@@ -47,7 +52,7 @@ export default function Reports() {
     setBusy(true);
     try {
       const report = await generateReport(selectedInvestigationId);
-      setReports((current) => [report, ...current]);
+      setReports((current) => [report, ...current.filter((item) => item.id !== report.id)]);
       setSelectedReport(report);
       toast.success("Report generated from persisted investigation records.");
     } catch (cause) { toast.error(cause instanceof Error ? cause.message : "Unable to generate this report."); }
@@ -71,11 +76,16 @@ export default function Reports() {
   if (loading) return <LoadingState label="Loading reports..." />;
   if (error) return <ErrorState title="Reports are unavailable" description="Check the backend and PostgreSQL connection." action={() => window.location.reload()} />;
 
+  const reportInvestigation = selectedReport ? objectValue(selectedReport.structured_content?.investigation) : {};
+  const entityCount = arrayValue(selectedReport?.structured_content?.entities).length;
+  const relationshipCount = arrayValue(selectedReport?.structured_content?.relationships).length;
+
   return <div className="reports-page">
-    <section className="report-hero glass-card" aria-labelledby="report-title">
+    <section className={`report-hero glass-card${selectedReport ? " report-hero-detail" : ""}`} aria-labelledby="report-title">
       <div className="report-heading">
+        {selectedReport && <button className="report-back" type="button" onClick={() => { setSelectedReport(null); setDetail(null); }}><ArrowLeft size={16} /> Back to reports</button>}
         <span className="eyebrow">INVESTIGATION REPORTS</span>
-        <h1 id="report-title">{selectedReport?.title || "Reports"}</h1>
+        <h1 id="report-title">{selectedReport ? stringValue(reportInvestigation.name, cleanReportTitle(selectedReport.title)) : "Reports"}</h1>
         <p>Reports summarize persisted investigation data; they do not synthesize research findings.</p>
       </div>
       <div className="report-controls" aria-label="Report actions">
@@ -94,15 +104,35 @@ export default function Reports() {
         </div>
       </div>
     </section>
+
     {selectedReport ? <>
-      <div className="report-metrics"><Metric icon={<FileText size={19} />} label="Entities" value={detail?.entities_count ?? "—"} /><Metric icon={<TrendingUp size={19} />} label="Relationships" value={detail?.relationships_count ?? "—"} /><Metric icon={<ShieldAlert size={19} />} label="Risk records" value={detail?.risk_count ?? "—"} /><Metric icon={<Sparkles size={19} />} label="Created" value={new Date(selectedReport.created_at).toLocaleDateString()} /></div>
-      <section className="report-content-section" aria-labelledby="investigation-report-heading">
-        <header className="report-section-heading"><span className="eyebrow">SAVED RECORDS</span><h2 id="investigation-report-heading">Investigation Report</h2></header>
-        <div className="report-grid"><section className="report-card glass-card"><div className="section-title"><BarChart3 size={18} /><div><h2>Persisted report content</h2><span>Generated by the backend from saved records</span></div></div><pre className="summary-text report-content">{selectedReport.content}</pre></section><section className="report-card glass-card"><div className="section-title"><FileText size={18} /><div><h2>Investigation</h2><span>{detail?.status || "Loading saved investigation"}</span></div></div><p className="summary-text">{detail?.goal || "The associated investigation details could not be loaded."}</p><div className="report-callout"><ShieldAlert size={17} /><span>This report reflects database contents at the time it was generated.</span></div></section></div>
-      </section>
-    </> : <div className="report-card glass-card"><div className="section-title"><FileText size={18} /><div><h2>No reports yet</h2><span>Choose a saved investigation to generate a data summary.</span></div></div>{investigations.length ? <p className="summary-text">Select an investigation above, then choose Generate report.</p> : <p className="summary-text">No investigation records are available.</p>}</div>}
-    {reports.length > 1 && <div className="report-history" aria-label="Report history">{reports.map((report) => <button key={report.id} className="report-export report-history-item" title={report.title} onClick={() => setSelectedReport(report)}>{report.title} · {new Date(report.created_at).toLocaleDateString()}</button>)}</div>}
+      <div className="report-metrics">
+        <Metric icon={<FileText size={19} />} label="Entities" value={detail?.entities_count ?? (selectedReport.structured_content ? entityCount : "—")} />
+        <Metric icon={<TrendingUp size={19} />} label="Relationships" value={detail?.relationships_count ?? (selectedReport.structured_content ? relationshipCount : "—")} />
+        <Metric icon={<ShieldAlert size={19} />} label="Evidence records" value={detail?.evidence_count ?? arrayValue(selectedReport.structured_content?.evidence).length} />
+        <Metric icon={<Sparkles size={19} />} label="Generated" value={formatDate(selectedReport.created_at)} />
+      </div>
+      <ReportDocument report={selectedReport} />
+    </> : <section className="saved-reports" aria-labelledby="saved-reports-heading">
+      <header className="saved-reports-heading"><div><span className="eyebrow">SAVED RECORDS</span><h2 id="saved-reports-heading">Saved reports</h2></div><span className="saved-report-count">{reports.length} {reports.length === 1 ? "report" : "reports"}</span></header>
+      {reports.length ? <div className="saved-report-list">{reports.map((report) => {
+        const investigation = objectValue(report.structured_content?.investigation);
+        const title = stringValue(investigation.name, cleanReportTitle(report.title));
+        const goal = stringValue(investigation.goal, "No investigation goal was saved with this report.");
+        return <article className="saved-report-card glass-card" key={report.id}>
+          <div className="saved-report-icon"><FileText size={19} /></div>
+          <div className="saved-report-copy"><span className="saved-report-kind">INVESTIGATION REPORT</span><h3>{title}</h3><p>{goal}</p><div className="saved-report-meta"><span className="saved-report-status"><i />Generated</span><span>{formatDate(report.created_at)}</span>{report.structured_content?.demo_only === true && <span className="report-demo-pill">DEMO ONLY</span>}</div></div>
+          <button className="saved-report-open" type="button" onClick={() => setSelectedReport(report)}>Open Report <ArrowRight size={16} /></button>
+        </article>;
+      })}</div> : <div className="report-empty glass-card"><div className="saved-report-icon"><FileText size={19} /></div><div><h3>No reports yet</h3><p>Choose a saved investigation above, then generate a report from its persisted records.</p></div></div>}
+      {!reports.length && !investigations.length && <p className="report-empty-note">No investigation records are available.</p>}
+    </section>}
   </div>;
 }
 
 function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) { return <div className="metric-card glass-card">{icon}<span>{label}</span><strong>{value}</strong></div>; }
+function objectValue(value: unknown): Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
+function arrayValue(value: unknown): unknown[] { return Array.isArray(value) ? value : []; }
+function stringValue(value: unknown, fallback: string): string { return typeof value === "string" && value.trim() ? value : fallback; }
+function cleanReportTitle(value: string): string { return value.replace(/\s*—\s*Investigation Report\s*$/i, "") || value; }
+function formatDate(value: string): string { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(date); }

@@ -132,6 +132,7 @@
 
 .settings-grid {
   display: grid;
+  min-width: 0;
   gap: 10px;
   margin-top: 20px;
 }
@@ -141,11 +142,9 @@
   padding: 17px;
 
   display: grid;
-
-  grid-template-columns:
-    42px
-    1fr
-    auto;
+  min-width: 0;
+  box-sizing: border-box;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
 
   gap: 12px;
 
@@ -169,6 +168,7 @@
 .setting-card h3 {
   margin: 0;
   font-size: 14px;
+  overflow-wrap: anywhere;
 }
 
 .setting-card p {
@@ -177,6 +177,7 @@
   color: var(--text-muted);
 
   font-size: 11px;
+  overflow-wrap: anywhere;
 }
 
 .setting-card > span {
@@ -188,7 +189,13 @@
   border-radius: 999px;
 
   background: rgba(167, 120, 88, 0.08);
+  max-width: 100%;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
+
+.setting-card > div:nth-child(2) { min-width: 0; }
 
 @media (max-width: 700px) {
   .profile-info {
@@ -199,4 +206,9 @@
   .settings-page {
     padding: 18px;
   }
+}
+
+@media (max-width: 480px) {
+  .setting-card { grid-template-columns: 40px minmax(0, 1fr); gap: 9px 11px; padding: 15px; }
+  .setting-card > span { grid-column: 2; justify-self: start; }
 }

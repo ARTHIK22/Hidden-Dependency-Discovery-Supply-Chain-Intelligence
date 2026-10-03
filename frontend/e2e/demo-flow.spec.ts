@@ -166,10 +166,91 @@ test("authenticated demo workflow works across the main product areas", async ({
   await expect(page.getByRole("button", { name: "Preferences" })).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login$/);
-  await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password").fill(password);
+  await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+  const loginEmail = page.getByLabel("Email", { exact: true });
+  const loginPassword = page.getByLabel("Password", { exact: true });
+  expect(await loginEmail.evaluate((input) => (input as HTMLInputElement).validity.valueMissing)).toBe(true);
+  expect(await loginPassword.evaluate((input) => (input as HTMLInputElement).validity.valueMissing)).toBe(true);
+  await loginEmail.fill("not-an-email");
+  expect(await loginEmail.evaluate((input) => (input as HTMLInputElement).validity.typeMismatch)).toBe(true);
+  expect(await page.locator(".login-card").evaluate((form) => !(form as HTMLFormElement).checkValidity())).toBe(true);
+
+  await loginEmail.fill(email);
+  await loginPassword.fill("Wrong-Demo-Password-42");
   await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("alert")).toHaveText("Incorrect email or password.");
+
+  await page.getByRole("button", { name: "Show password" }).click();
+  await expect(loginPassword).toHaveAttribute("type", "text");
+  await expect(page.getByRole("button", { name: "Hide password" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Hide password" }).click();
+  await expect(loginPassword).toHaveAttribute("type", "password");
+  await expect(page.locator(".login-google")).toHaveCount(0);
+  await expect(page.locator(".login-divider")).toHaveCount(0);
+  await expect(page.locator(".login-card")).not.toContainText("Google sign-in is not configured");
+  await page.getByRole("button", { name: "Forgot password?" }).click();
+  await expect(page.getByRole("status")).toContainText("For password reset help, contact your workspace administrator.");
+  await expect(page.locator(".login-card")).not.toContainText("not configured");
+
+  await loginEmail.focus();
+  await page.keyboard.press("Tab");
+  await expect(loginPassword).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Show password" })).toBeFocused();
+
+  await loginPassword.fill(password);
+  await page.route("**/auth/login", async (route) => route.abort());
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("alert")).toHaveText("Unable to connect. Please check your connection and try again.");
+  await page.unroute("**/auth/login");
+
+  for (const viewport of [
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/login");
+    await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+    const authLayout = await page.evaluate(() => {
+      const screen = document.querySelector<HTMLElement>(".auth-login-screen")!;
+      const composition = document.querySelector<HTMLElement>(".auth-composition")!;
+      const card = document.querySelector<HTMLElement>(".login-card")!;
+      const ambience = document.querySelector<HTMLElement>(".auth-ambience")!;
+      const screenRect = screen.getBoundingClientRect();
+      const cardRect = card.getBoundingClientRect();
+      return {
+        documentOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+        cardInsideScreen: cardRect.left >= screenRect.left && cardRect.right <= screenRect.right,
+        cardFitsItsContent: card.scrollWidth <= card.clientWidth + 1,
+        ambienceBehindForm: Number(getComputedStyle(ambience).zIndex) < Number(getComputedStyle(composition).zIndex),
+        networkHiddenOnMobile: window.innerWidth > 640 || getComputedStyle(document.querySelector(".auth-network")!).display === "none",
+      };
+    });
+    expect(authLayout.documentOverflow, `login page overflow at ${viewport.width}px`).toBe(false);
+    expect(authLayout.cardInsideScreen, `login card exceeds the screen at ${viewport.width}px`).toBe(true);
+    expect(authLayout.cardFitsItsContent, `login card content overflows at ${viewport.width}px`).toBe(true);
+    expect(authLayout.ambienceBehindForm).toBe(true);
+    expect(authLayout.networkHiddenOnMobile).toBe(true);
+  }
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/login");
+  await page.getByRole("link", { name: /Create an account/ }).click();
+  await expect(page).toHaveURL(/\/register$/);
+  await expect(page.getByRole("heading", { name: "Create account" })).toBeVisible();
+  await page.goto("/login");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.route("**/auth/login", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("button", { name: "Signing in..." })).toBeDisabled();
   await expect(page).toHaveURL("http://localhost:5175/");
+  await page.unroute("**/auth/login");
 
   for (const viewport of [
     { width: 1920, height: 1080 },
@@ -191,7 +272,9 @@ test("authenticated demo workflow works across the main product areas", async ({
     expect(dashboardOverflowsHorizontally, `dashboard overflow at ${viewport.width}px`).toBe(false);
 
     await page.goto("/reports");
-    await expect(page.getByRole("heading", { name: "Investigation Report", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Reports", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Open Report" }).first().click();
+    await expect(page.locator(".report-document")).toBeVisible();
     await expect(page.getByRole("button", { name: "Open profile menu" })).toBeVisible();
     const reportLayout = await page.evaluate(() => {
       const bounds = (selector: string) => {
@@ -268,6 +351,45 @@ test("authenticated demo workflow works across the main product areas", async ({
       expect(dropdownBounds.right).toBeLessThanOrEqual(viewport.width + 1);
       await page.getByRole("button", { name: "Open profile menu" }).click();
     }
+
+    await page.goto("/risks");
+    await expect(page.getByRole("heading", { name: "Risk Intelligence" })).toBeVisible();
+    const riskLayout = await page.evaluate(() => {
+      const shell = document.querySelector<HTMLElement>(".app-shell");
+      const page = document.querySelector<HTMLElement>(".risk-page");
+      const selector = document.querySelector<HTMLElement>(".risk-analysis-controls select");
+      const table = document.querySelector<HTMLElement>(".risk-table");
+      return {
+        documentOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+        shellOverflow: (shell?.scrollWidth ?? 0) > window.innerWidth + 1,
+        pageOverflow: page ? page.scrollWidth > page.clientWidth + 1 : true,
+        selectorFits: selector ? selector.getBoundingClientRect().right <= window.innerWidth + 1 : false,
+        tableOverflow: table ? table.scrollWidth > table.clientWidth + 1 : false,
+      };
+    });
+    expect(riskLayout.documentOverflow, `risk document overflow at ${viewport.width}px`).toBe(false);
+    expect(riskLayout.shellOverflow, `risk app shell overflow at ${viewport.width}px`).toBe(false);
+    expect(riskLayout.pageOverflow, `risk page overflow at ${viewport.width}px`).toBe(false);
+    expect(riskLayout.selectorFits, `risk selector exceeds the viewport at ${viewport.width}px`).toBe(true);
+    if (viewport.width >= 1280) expect(riskLayout.tableOverflow, `risk table overflows internally at ${viewport.width}px`).toBe(false);
+
+    await page.goto("/settings");
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+    const settingsLayout = await page.evaluate(() => {
+      const shell = document.querySelector<HTMLElement>(".app-shell");
+      const page = document.querySelector<HTMLElement>(".settings-page");
+      const cards = [...document.querySelectorAll<HTMLElement>(".setting-card")];
+      return {
+        documentOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+        shellOverflow: (shell?.scrollWidth ?? 0) > window.innerWidth + 1,
+        pageOverflow: page ? page.scrollWidth > page.clientWidth + 1 : true,
+        cardsFit: cards.every((card) => card.getBoundingClientRect().right <= window.innerWidth + 1 && card.scrollWidth <= card.clientWidth + 1),
+      };
+    });
+    expect(settingsLayout.documentOverflow, `settings document overflow at ${viewport.width}px`).toBe(false);
+    expect(settingsLayout.shellOverflow, `settings app shell overflow at ${viewport.width}px`).toBe(false);
+    expect(settingsLayout.pageOverflow, `settings page overflow at ${viewport.width}px`).toBe(false);
+    expect(settingsLayout.cardsFit, `settings card content overflows at ${viewport.width}px`).toBe(true);
   }
 
   expect(apiErrors).toEqual([]);

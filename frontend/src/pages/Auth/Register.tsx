@@ -1,8 +1,8 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { register } from "../../features/auth/auth.api";
+import { authErrorMessage } from "../../features/auth/auth.utils";
 import { authStore } from "../../stores/auth.store";
-import { userMessage } from "../../services/api/errors";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ export default function Register() {
     try {
       const session = await register({ full_name: fullName, email, password });
       authStore.setToken(session.access_token); authStore.setUser(session.user); navigate("/", { replace: true });
-    } catch (reason) { setError(userMessage(reason)); } finally { setBusy(false); }
+    } catch (reason) { setError(authErrorMessage(reason, "register")); } finally { setBusy(false); }
   }
   return <main className="auth-screen"><form className="auth-card" onSubmit={submit}>
     <span className="eyebrow">SUPPLY INTELLIGENCE</span><h1>Create account</h1><p>Register to join the shared development workspace.</p>
